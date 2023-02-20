@@ -27,6 +27,7 @@
     "fast-xml-parser": "^4.1.2",
     "jimp": "^0.22.4",
     "misty": "^1.6.10",
-    "prompts": "^2.4.2"
+    "prompts": "^2.4.2",
+    "svg2img": "^1.0.0-beta.2"
   }
 }

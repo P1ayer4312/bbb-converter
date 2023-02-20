@@ -3,6 +3,10 @@ const fs = require('node:fs');
 const cheerio = require('cheerio');
 const fetchXMLfile = require('../function/fetchXMLfile');
 
+/**
+ * Wrapper class used for holding informations about
+ * the presentation and its files
+ */
 class PresentationInfo {
 	/**
 	 * Wrapper class used for holding informations about
@@ -21,6 +25,7 @@ class PresentationInfo {
 			: `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
 
 		this.url = url;
+		this.filesUrl = filesUrl;
 		this.presentationId = presentationId;
 		this.folderLocation = folderLocation;
 		this.dataLocation = path.resolve(folderLocation, 'data');
@@ -29,11 +34,19 @@ class PresentationInfo {
 			cursorXml: `${filesUrl}/cursor.xml`,
 			slidesXml: `${filesUrl}/shapes.svg`,
 			panZoomXml: `${filesUrl}/panzooms.xml`,
-			deskshareXml: `${filesUrl}/deskshare.xml`,
 			metadataXml: `${filesUrl}/metadata.xml`,
+			deskshareXml: `${filesUrl}/deskshare.xml`,
+		};
+		this.videoFilesUrls = {
+			deskshare: `${filesUrl}/deskshare/deskshare.webm`,
+			webcams: `${filesUrl}/video/webcams.webm`,
 		};
 		this.title = null;
 		this.courseName = null;
+		/**
+		 * Raw xml files in json format
+		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml}}
+		 */
 		this.xmlFiles = null;
 	}
 
@@ -51,6 +64,13 @@ class PresentationInfo {
 			fs.mkdirSync(this.dataLocation);
 			fs.mkdirSync(this.shapesLocation);
 		}
+	}
+	/**
+	 * Clean up unnecessary files and folders when done
+	 */
+	deleteFolders() {
+		fs.rmdirSync(this.dataLocation);
+		fs.rmdirSync(this.shapesLocation);
 	}
 	/**
 	 * Convert course name and presentation title and store them
