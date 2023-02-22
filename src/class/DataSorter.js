@@ -18,6 +18,10 @@ class DataSorter {
 		const shapesXml = presentation.xmlFiles.slidesXml;
 		const slides = [];
 		for (let image of shapesXml.svg.image) {
+			// Skip placeholder images used where screen sharing takes place
+			if (image['xlink:href'] == 'presentation/deskshare.png') {
+				continue;
+			}
 			const slideInfo = {
 				id: image.id,
 				timestamp: {
@@ -29,15 +33,45 @@ class DataSorter {
 					height: parseInt(image.height),
 				},
 				url: `${presentation.filesUrl}/${image['xlink:href']}`,
+				/**
+				 * @type {Array.<{id: String, timestamp: {start: Number, end: Number}, location: String}>}
+				 */
 				shapes: null,
-				cursor: null,
+				/**
+				 * @type {Array.<{timestamp: {start: Number, end: Number}, position: {posX: Number, posY: Number}}>}
+				 */
+				cursors: null,
 			};
 
-			const shapes = shapesXml.svg.g.find((el) => el.image == image.id);
-			if (shapes) {
-				const shapesInfo = [];
-				if (Array.isArray(shapes.g)) {
-					for (let shape of shapes.g) {
+			// Check if there are drawn shapes present
+			if (shapesXml.svg.g) {
+				const shapes = Array.isArray(shapesXml.svg.g)
+					? shapesXml.svg.g.find((el) => el.image == image.id)
+					: shapesXml.svg.g;
+
+				if (shapes) {
+					const shapesInfo = [];
+					if (Array.isArray(shapes.g)) {
+						for (let shape of shapes.g) {
+							const temp = {
+								id: shape.id,
+								timestamp: {
+									start: parseFloat(shape.timestamp),
+									end:
+										shape.undo == '-1'
+											? slideInfo.timestamp.end
+											: parseFloat(shape.undo),
+								},
+								location: path.resolve(
+									presentation.shapesLocation,
+									`${shape.id}.png`
+								),
+							};
+
+							shapesInfo.push(temp);
+						}
+					} else {
+						const shape = shapes.g;
 						const temp = {
 							id: shape.id,
 							timestamp: {
@@ -55,34 +89,15 @@ class DataSorter {
 
 						shapesInfo.push(temp);
 					}
-				} else {
-					const shape = shapes.g;
-					const temp = {
-						id: shape.id,
-						timestamp: {
-							start: parseFloat(shape.timestamp),
-							end:
-								shape.undo == '-1'
-									? slideInfo.timestamp.end
-									: parseFloat(shape.undo),
-						},
-						location: path.resolve(
-							presentation.shapesLocation,
-							`${shape.id}.png`
-						),
-					};
 
-					shapesInfo.push(temp);
+					slideInfo.shapes = shapesInfo;
 				}
-
-				slideInfo.shapes = shapesInfo;
 			}
 
 			slides.push(slideInfo);
 		}
 
 		this.slides = slides;
-		require('node:fs').writeFileSync('test_data.json', JSON.stringify(slides));
 	}
 	/**
 	 * Export drawn shapes from svg to png format
@@ -123,31 +138,43 @@ class DataSorter {
 			}
 		}
 	}
+	/**
+	 * Groups cursors by slide start and end
+	 * @param {PresentationInfo} presentation
+	 */
+	groupCursorsByTime(presentation) {
+		// Parse xml cursors
+		const cursorsHolder = [];
+		const events = presentation.xmlFiles.cursorXml.recording.event;
+		for (let n = 0; n < events.length - 1; n++) {
+			const point = events[n];
+			const cursorPos = point.cursor.split(' ').map((el) => parseFloat(el));
+			if (cursorPos[0] == -1) {
+				continue;
+			}
+			cursorsHolder.push({
+				timestamp: {
+					start: parseFloat(point.timestamp),
+					end: parseFloat(events[n + 1].timestamp),
+				},
+				position: {
+					posX: cursorPos[0],
+					posY: cursorPos[1],
+				},
+			});
+		}
+		// Group them in their appropriate slides filtered by time
+		for (let slide of this.slides) {
+			const cursors = cursorsHolder.filter((cursor) => {
+				return (
+					slide.timestamp.start <= cursor.timestamp.start &&
+					slide.timestamp.end >= cursor.timestamp.end
+				);
+			});
+
+			slide.cursors = cursors.length > 0 ? cursors : null;
+		}
+	}
 }
 
 module.exports = DataSorter;
-
-// slides = [
-// 	{
-// 		id: 'image9',
-// 		timestamp: {
-// 			start: 0.0,
-// 			end: 10.9,
-// 		},
-// 		resolution: {
-// 			width: 1600,
-// 			height: 1200,
-// 		},
-// 		url: 'http://DOMAIN/SLIDE_LOCATION',
-// 		shapes: [
-// 			{
-// 				id: 'image9-draw1',
-// 				timestamp: {
-// 					start: 916.1,
-// 					end: -1 ? this.timestamp.end : 1132.0,
-// 				},
-// 				location: 'PRESENTATION_FOLDER/shapes'
-// 			},
-// 		],
-// 	},
-// ];

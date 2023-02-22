@@ -9,8 +9,6 @@ const fetchXMLfile = require('../function/fetchXMLfile');
  */
 class PresentationInfo {
 	/**
-	 * Wrapper class used for holding informations about
-	 * the presentation and its files
 	 * @param {String} url
 	 * @param {String} dummyDataUrl used for testing
 	 */
@@ -75,7 +73,7 @@ class PresentationInfo {
 	/**
 	 * Convert course name and presentation title and store them
 	 */
-	async loadCourseNameAndTitle() {
+	loadCourseNameAndTitle() {
 		// Probably the least efficient way of parsing this shit
 		const metadata = this.xmlFiles.metadataXml;
 		const $ = cheerio.load(`
