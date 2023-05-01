@@ -1,41 +1,53 @@
 // eslint-disable-next-line no-unused-vars
 const DataSorter = require('./DataSorter');
+// eslint-disable-next-line no-unused-vars
+const PresentationInfo = require('./PresentationInfo');
+// eslint-disable-next-line no-unused-vars
+const typedefs = require('../types/typedefs');
+const logs = require('../function/logs');
+const config = require('../../config.json');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execSync } = require('node:child_process');
 /**
  * Wrapper class for creating videos
  */
 class VideoCreator {
 	/**
-	 * @param {{width: Number, height: Number}} resolution
+	 * @param {typedefs.Resolution} resolution
 	 */
 	constructor(resolution) {
+		logs('Creating "VideoCreator" instance');
+		/**
+		 * @type {Array.<typedefs.Chunk>}
+		 */
 		this.sequence = [];
 		this.resolution = resolution;
 	}
 	/**
 	 * Generates complex filter files for ffmpeg
 	 * @param {DataSorter} dataSorter
-	 * @param {String} dataLocation
+	 * @param {PresentationInfo} presentation
 	 */
-	createSequence(dataSorter, dataLocation) {
+	createSequence(dataSorter, presentation) {
 		for (let slide of dataSorter.slides) {
 			/**
-			 * @type {{width: Number, height: Number, cursor: (String|null), shapes: (String|null)}}
+			 * @type {typedefs.Chunk}
 			 */
-			const chunk = {
-				cursor: null,
-				shapes: null,
-			};
+			const chunk = {};
 			const offset = slide.timestamp.start;
 			chunk.height = this.resolution.height;
 			chunk.width = Math.round(
 				(this.resolution.height * slide.resolution.width) /
-					slide.resolution.height
-			);
+				slide.resolution.height
+			); //TODO: Mozhe i da ne treba ova // Ne znam brat, treba da vidam
+			chunk.timestamp = slide.timestamp;
 			// Check if there are cursors present
+			const complexFilterBuilder = [];
+			const inputBuilder = [
+				presentation.cursorLocation
+			];
 			if (slide.cursors !== null) {
-				const complexFilterBuilder = [];
 				for (let n = 0; n < slide.cursors.length; n++) {
 					const cursor = slide.cursors[n];
 					const cursorX = (chunk.width * cursor.position.posX).toFixed(2);
@@ -43,32 +55,58 @@ class VideoCreator {
 					const start = (cursor.timestamp.start - offset).toFixed(1);
 					const end = (cursor.timestamp.end - offset).toFixed(1);
 
-					if (n === 0) {
-						complexFilterBuilder.push(
-							`[0:v][1:v]overlay=${cursorX}:${cursorY}` +
-								`:enable='between(t,${start},${end})'[v${n + 1}];`
-						);
-					} else if (n < slide.cursors.length - 1) {
-						complexFilterBuilder.push(
-							`[v${n}][1:v]overlay=${cursorX}:${cursorY}` +
-								`:enable='between(t,${start},${end})'[v${n + 1}];`
-						);
-					} else {
-						complexFilterBuilder.push(
-							`[v${n}][1:v]overlay=${cursorX}:${cursorY}` +
-								`:enable='between(t,${start},${end})'`
-						);
-					}
+					complexFilterBuilder.push(
+						(n === 0 ? `[0:v]` : `[v${n}]`) +
+						`[1:v]overlay=${cursorX}:${cursorY}:enable='between(t,${start},${end})'` +
+						(n < slide.cursors.length - 1 ? `[v${n + 1}];` : ``)
+					);
 				}
-
-				chunk.cursor = `${slide.id}_cursor.txt`;
-				fs.writeFileSync(
-					path.resolve(dataLocation, chunk.cursor),
-					complexFilterBuilder.join('')
+			} else {
+				// Push empty cursor to not break the chain of inputs
+				complexFilterBuilder.push(
+					`[0:v][1:v]overlay=-20:-20:enable='between(t,0,0)'`
 				);
 			}
 
-			// Check if there are shapes present //TODO
+			// Check if there are any shapes present
+			if (slide.shapes !== null) {
+				const lastCursor = complexFilterBuilder.length;
+				for (let n = 0; n < slide.shapes.length; n++) {
+					const shape = slide.shapes[n];
+					const start = (shape.timestamp.start - offset).toFixed(1);
+					const end = (shape.timestamp.end - offset).toFixed(1);
+
+					complexFilterBuilder.push(
+						(n === 0 ? `[v${lastCursor}];[v${lastCursor}]` : `[v${lastCursor + n}]`) +
+						`[${n + 2}:v]overlay=0:0:enable='between(t,${start},${end})'` +
+						(n < slide.shapes.length - 1 ? `[v${lastCursor + n + 1}];` : ``)
+					);
+					inputBuilder.push(shape.location);
+				}
+			}
+
+			const complexFilterFileName = `${slide.id}.txt`;
+			const complexFilterFileLocation = path.resolve(presentation.dataLocation, complexFilterFileName);
+			const slideImageLocation = path.resolve(presentation.dataLocation, slide.fileName);
+			chunk.id = slide.id;
+			chunk.duration = Number((slide.timestamp.end - slide.timestamp.start).toFixed(1));
+			chunk.command =
+				`ffmpeg -hide_banner -y -loop 1 -i ${slideImageLocation} -i ${inputBuilder.join(' -i ')} ` +
+				`-t ${chunk.duration} -filter_complex_script ${complexFilterFileLocation} ` +
+				`${path.resolve(presentation.dataLocation, `${slide.id}.mp4`)}`;
+
+			fs.writeFileSync(complexFilterFileLocation, complexFilterBuilder.join(''));
+
+			this.sequence.push(chunk);
+		}
+	}
+	/**
+	 * Use data from the sequence array to generate slide video chunks
+	 */
+	renderChunks() {
+		for (let chunk of this.sequence) {
+			logs(`Rendering chunk: ${chunk.id}`);
+			execSync(chunk.command, { stdio: config.consoleLogStatus ? 'inherit' : 'ignore' });
 		}
 	}
 }

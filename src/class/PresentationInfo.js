@@ -2,6 +2,9 @@ const path = require('node:path');
 const fs = require('node:fs');
 const cheerio = require('cheerio');
 const fetchXMLfile = require('../function/fetchXMLfile');
+const logs = require('../function/logs');
+// eslint-disable-next-line no-unused-vars
+const typedefs = require('../types/typedefs');
 
 /**
  * Wrapper class used for holding informations about
@@ -13,6 +16,7 @@ class PresentationInfo {
 	 * @param {String} dummyDataUrl used for testing
 	 */
 	constructor(url, dummyDataUrl) {
+		logs('Creating "PresentationInfo" instance');
 		const inputUrl = new URL(url);
 		const presentationId = inputUrl.pathname.substring(
 			inputUrl.pathname.lastIndexOf('/') + 1
@@ -28,6 +32,7 @@ class PresentationInfo {
 		this.folderLocation = folderLocation;
 		this.dataLocation = path.resolve(folderLocation, 'data');
 		this.shapesLocation = path.resolve(folderLocation, 'shapes');
+		this.cursorLocation = path.resolve('src', 'static', 'cursor.png');
 		this.filesUrls = {
 			cursorXml: `${filesUrl}/cursor.xml`,
 			slidesXml: `${filesUrl}/shapes.svg`,
@@ -43,25 +48,26 @@ class PresentationInfo {
 		this.courseName = null;
 		/**
 		 * Raw xml files in json format
-		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml}}
+		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml: typedefs.DeskshareXML}}
 		 */
 		this.xmlFiles = null;
 	}
-
 	/**
 	 * Used for setting up the folders used in the process of conversion
 	 */
 	createFolders() {
-		// Check if presentations folder exists
-		if (!fs.existsSync(path.resolve('presentations'))) {
-			fs.mkdirSync('presentations');
+		// Check if needed folders exist and create them
+		const checkAndCreate = (folder) => {
+			if (!fs.existsSync(folder)) {
+				logs(`Creating folder "${folder}"`);
+				fs.mkdirSync(folder);
+			}
 		}
-		// Check if folder exists and create needed folders
-		if (!fs.existsSync(this.folderLocation)) {
-			fs.mkdirSync(this.folderLocation);
-			fs.mkdirSync(this.dataLocation);
-			fs.mkdirSync(this.shapesLocation);
-		}
+
+		checkAndCreate(path.resolve('presentations'));
+		checkAndCreate(this.folderLocation);
+		checkAndCreate(this.dataLocation);
+		checkAndCreate(this.shapesLocation);
 	}
 	/**
 	 * Clean up unnecessary files and folders when done
@@ -75,6 +81,7 @@ class PresentationInfo {
 	 */
 	loadCourseNameAndTitle() {
 		// Probably the least efficient way of parsing this shit
+		logs('Storing course name and title');
 		const metadata = this.xmlFiles.metadataXml;
 		const $ = cheerio.load(`
 			<p id="bbb-context">${metadata.recording.meta['bbb-context']}</p>
@@ -83,6 +90,8 @@ class PresentationInfo {
 
 		this.title = $('#meetingName').text();
 		this.courseName = $('#bbb-context').text();
+		logs(this.title);
+		logs(this.courseName);
 	}
 	/**
 	 * Fetch current xml files and store them inside the object

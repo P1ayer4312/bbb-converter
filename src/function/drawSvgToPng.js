@@ -1,6 +1,7 @@
 const { XMLBuilder } = require('fast-xml-parser');
 const Jimp = require('jimp');
 const svg2img = require('svg2img');
+const logs = require('../function/logs');
 const xmlBuilder = new XMLBuilder({
 	ignoreAttributes: false,
 	attributeNamePrefix: '',
@@ -34,11 +35,12 @@ async function drawSvgToPng(
 		},
 	});
 
-	await new Promise((resolve) => {
-		svg2img(xmlString, (err, buffer) => {
+	const newWidth = Math.round((videoHeight * width) / height);
+	logs(`Drawing ${data.id}`);
+	return await new Promise((resolve) => {
+		svg2img(xmlString, async (err, buffer) => {
 			Jimp.read(buffer).then((image) => {
-				image.resize(videoWidth, videoHeight).write(path);
-
+				image.resize(newWidth, videoHeight).write(path);
 				resolve();
 			});
 		});
