@@ -55,6 +55,7 @@
  * @property {Timestamp} timestamp
  * @property {String} command FFMPEG command
  * @property {Number} duration Chunk duration in seconds
+ * @property {String} fileLocation
  */
 
 /**

@@ -289,14 +289,15 @@ class DataSorter {
 	/**
 	 * Download presentation slides
 	 * @param {String} downloadFolder 
+	 * @param {typedefs.Resolution} resolution
 	 */
-	async downloadSlides(downloadFolder) {
+	async downloadSlides(downloadFolder, resolution) {
 		if (this.slides === null) {
 			logs('No slides detected');
 		} else {
 			logs('Downloading slides');
 			for (let slide of this.slides) {
-				await downloadSlide(slide.url, downloadFolder);
+				await downloadSlide(slide.url, downloadFolder, resolution.height);
 			}
 		}
 	}

@@ -38,7 +38,7 @@ async function drawSvgToPng(
 	const newWidth = Math.round((videoHeight * width) / height);
 	logs(`Drawing ${data.id}`);
 	return await new Promise((resolve) => {
-		svg2img(xmlString, async (err, buffer) => {
+		svg2img(xmlString, (err, buffer) => {
 			Jimp.read(buffer).then((image) => {
 				image.resize(newWidth, videoHeight).write(path);
 				resolve();

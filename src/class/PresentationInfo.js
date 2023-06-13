@@ -46,6 +46,7 @@ class PresentationInfo {
 		};
 		this.title = null;
 		this.courseName = null;
+		this.duration = 0;
 		/**
 		 * Raw xml files in json format
 		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml: typedefs.DeskshareXML}}
@@ -79,9 +80,9 @@ class PresentationInfo {
 	/**
 	 * Convert course name and presentation title and store them
 	 */
-	loadCourseNameAndTitle() {
+	loadCourseInfo() {
 		// Probably the least efficient way of parsing this shit
-		logs('Storing course name and title');
+		logs('Storing course name, title and duration');
 		const metadata = this.xmlFiles.metadataXml;
 		const $ = cheerio.load(`
 			<p id="bbb-context">${metadata.recording.meta['bbb-context']}</p>
@@ -90,6 +91,17 @@ class PresentationInfo {
 
 		this.title = $('#meetingName').text();
 		this.courseName = $('#bbb-context').text();
+		this.duration = Number((metadata.recording.playback.duration / 1000).toFixed(1));
+
+		// Patch last slide's "out" time, for some reason it shows wrong time
+		const slides = this.xmlFiles.slidesXml.svg.image;
+		if (Array.isArray(slides)) {
+			const lastSlide = slides[slides.length - 1];
+			lastSlide.out = this.duration;
+		} else {
+			slides.out = this.duration;
+		}
+
 		logs(this.title);
 		logs(this.courseName);
 	}
