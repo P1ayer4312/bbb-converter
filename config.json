@@ -1,4 +1,6 @@
 {
 	"consoleLogStatus": true,
-	"numParalelShapesDrawn": 10
+	"ffmpegStatus": true,
+	"reEncodeFinalConcat": false,
+	"cleanUpWhenDone": false
 }

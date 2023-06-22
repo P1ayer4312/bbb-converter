@@ -28,7 +28,7 @@ async function downloadSlide(url, downloadFolder, videoHeight) {
 		},
 	});
 
-	logs(`Downloading ${url}`);
+	logs(`Downloading ${url}`, 'cyan');
 	const response = await axios({
 		url,
 		method: 'get',

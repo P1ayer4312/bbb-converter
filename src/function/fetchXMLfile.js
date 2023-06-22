@@ -9,7 +9,7 @@ const logs = require('./logs');
  * @returns 
  */
 function fetchXMLfile(url) {
-	logs(`Fetching ${url}`);
+	logs(`Fetching ${url}`, 'cyan');
 	return axios.get(url)
 		.then(res => xmlParser.parse(res.data))
 		.catch(() => {

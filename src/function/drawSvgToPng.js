@@ -1,7 +1,8 @@
 const { XMLBuilder } = require('fast-xml-parser');
 const Jimp = require('jimp');
-const svg2img = require('svg2img');
+const svgToImg = require('svg-to-img');
 const logs = require('../function/logs');
+const { parentPort } = require('node:worker_threads');
 const xmlBuilder = new XMLBuilder({
 	ignoreAttributes: false,
 	attributeNamePrefix: '',
@@ -24,7 +25,8 @@ async function drawSvgToPng(
 	data,
 	path
 ) {
-	const xmlString = xmlBuilder.build({
+	/** @type {String} */
+	let xmlString = xmlBuilder.build({
 		svg: {
 			xmlns: 'http://www.w3.org/2000/svg',
 			version: '1.1',
@@ -35,15 +37,24 @@ async function drawSvgToPng(
 		},
 	});
 
+	// There's a bug inside XMLBuilder that causes node values to
+	// not be built properly, so we need to manually fix them :/
+	if (xmlString.includes('textValue')) {
+		xmlString = xmlString.replace('></text>', `>${data.text.textValue}</text>`);
+	}
+
+	parentPort.postMessage(`Drawing ${data.id}`);
+
+	const svgImg = await svgToImg.from(xmlString).toPng();
 	const newWidth = Math.round((videoHeight * width) / height);
-	logs(`Drawing ${data.id}`);
-	return await new Promise((resolve) => {
-		svg2img(xmlString, (err, buffer) => {
-			Jimp.read(buffer).then((image) => {
-				image.resize(newWidth, videoHeight).write(path);
-				resolve();
-			});
-		});
+	new Jimp(videoWidth, videoHeight, async (err, newImage) => {
+		if (err) {
+			console.log(err);
+		}
+		const svgImage = await Jimp.read(svgImg);
+		svgImage.resize(Jimp.AUTO, videoHeight);
+		const xOffset = Math.abs((videoWidth - newWidth) / 4);
+		newImage.composite(svgImage, xOffset, 0).write(path);
 	});
 }
 

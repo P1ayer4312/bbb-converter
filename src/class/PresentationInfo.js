@@ -16,7 +16,7 @@ class PresentationInfo {
 	 * @param {String} dummyDataUrl used for testing
 	 */
 	constructor(url, dummyDataUrl) {
-		logs('Creating "PresentationInfo" instance');
+		logs('Creating "PresentationInfo" instance', 'yellow');
 		const inputUrl = new URL(url);
 		const presentationId = inputUrl.pathname.substring(
 			inputUrl.pathname.lastIndexOf('/') + 1
@@ -52,6 +52,10 @@ class PresentationInfo {
 		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml: typedefs.DeskshareXML}}
 		 */
 		this.xmlFiles = null;
+		this.outputFileName = 'presentation_export'
+	}
+	getFullName() {
+		return `${this.title} - ${this.courseName}`;
 	}
 	/**
 	 * Used for setting up the folders used in the process of conversion
@@ -60,10 +64,10 @@ class PresentationInfo {
 		// Check if needed folders exist and create them
 		const checkAndCreate = (folder) => {
 			if (!fs.existsSync(folder)) {
-				logs(`Creating folder "${folder}"`);
+				logs(`Creating folder "${folder}"`, 'cyan');
 				fs.mkdirSync(folder);
 			}
-		}
+		};
 
 		checkAndCreate(path.resolve('presentations'));
 		checkAndCreate(this.folderLocation);
@@ -82,7 +86,7 @@ class PresentationInfo {
 	 */
 	loadCourseInfo() {
 		// Probably the least efficient way of parsing this shit
-		logs('Storing course name, title and duration');
+		logs('Storing course name, title and duration', 'cyan');
 		const metadata = this.xmlFiles.metadataXml;
 		const $ = cheerio.load(`
 			<p id="bbb-context">${metadata.recording.meta['bbb-context']}</p>
@@ -91,7 +95,9 @@ class PresentationInfo {
 
 		this.title = $('#meetingName').text();
 		this.courseName = $('#bbb-context').text();
-		this.duration = Number((metadata.recording.playback.duration / 1000).toFixed(1));
+		this.duration = Number(
+			(metadata.recording.playback.duration / 1000).toFixed(2)
+		);
 
 		// Patch last slide's "out" time, for some reason it shows wrong time
 		const slides = this.xmlFiles.slidesXml.svg.image;
@@ -101,9 +107,6 @@ class PresentationInfo {
 		} else {
 			slides.out = this.duration;
 		}
-
-		logs(this.title);
-		logs(this.courseName);
 	}
 	/**
 	 * Fetch current xml files and store them inside the object
