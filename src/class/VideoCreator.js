@@ -36,19 +36,18 @@ class VideoCreator {
 			const chunk = {};
 			// 'offset' is used for correcting chunk timings for elements
 			const offset = slide.timestamp.start;
-			// Add padding from the left side of cursors / shapes if the
-			// slide image is too small for the wanted resolution
-			const padding =
-				slide.resolution.width < this.resolution.width
-					? (this.resolution.width - slide.resolution.width) / 2
-					: 0;
-
 			chunk.height = this.resolution.height;
 			chunk.width = Math.round(
 				(this.resolution.height * slide.resolution.width) /
 					slide.resolution.height
 			);
 			chunk.timestamp = slide.timestamp;
+			// Add padding from the left side of cursors / shapes if the
+			// slide image width is too small for the wanted resolution
+			const padding =
+				chunk.width < this.resolution.width
+					? (this.resolution.width - chunk.width) / 2
+					: 0;
 			const complexFilterBuilder = [];
 			const inputBuilder = [presentation.cursorLocation];
 			// Center slide if it's smaller than the desired resolution
@@ -60,10 +59,14 @@ class VideoCreator {
 			if (slide.cursors !== null) {
 				for (let n = 0; n < slide.cursors.length; n++) {
 					const cursor = slide.cursors[n];
-					const cursorX = (
-						chunk.width * cursor.position.posX +
-						padding
-					).toFixed(2);
+					// Since we resized the slide size above, we'll have to fix
+					// the cursor offsets to work with the new slide resolution
+					const newPosX =
+						(chunk.width * cursor.position.posX) / slide.resolution.width;
+					//* Not sure about this one, looks better without it from my tests
+					// const newPosY =
+					// 	(chunk.height * cursor.position.posY) / slide.resolution.height;
+					const cursorX = (chunk.width * newPosX + padding).toFixed(2);
 					const cursorY = (chunk.height * cursor.position.posY).toFixed(2);
 					const start = (cursor.timestamp.start - offset).toFixed(2);
 					const end = (cursor.timestamp.end - offset).toFixed(2);
@@ -93,7 +96,7 @@ class VideoCreator {
 						(n === 0
 							? `[v${lastCursor}];[v${lastCursor}]`
 							: `[v${lastCursor + n}]`) +
-							`[${n + 2}:v]overlay=${padding}:0:enable=` +
+							`[${n + 2}:v]overlay=0:0:enable=` +
 							`'between(t,${start},${end})'` +
 							(n < slide.shapes.length - 1 ? `[v${lastCursor + n + 1}];` : ``)
 					);
@@ -144,6 +147,8 @@ class VideoCreator {
 			logs(`Rendering chunk: ${chunk.id}`, 'cyan');
 			executeCommand(chunk.command);
 		}
+
+		logs('Chunks rendering complete', 'magenta');
 	}
 	/**
 	 * Combines everything into one large video

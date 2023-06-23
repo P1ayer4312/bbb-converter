@@ -53,7 +53,7 @@ async function drawSvgToPng(
 		}
 		const svgImage = await Jimp.read(svgImg);
 		svgImage.resize(Jimp.AUTO, videoHeight);
-		const xOffset = Math.abs((videoWidth - newWidth) / 4);
+		const xOffset = Math.abs((videoWidth - newWidth) / 2);
 		newImage.composite(svgImage, xOffset, 0).write(path);
 	});
 }
