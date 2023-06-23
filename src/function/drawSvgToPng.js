@@ -1,7 +1,6 @@
 const { XMLBuilder } = require('fast-xml-parser');
 const Jimp = require('jimp');
 const svgToImg = require('svg-to-img');
-const logs = require('../function/logs');
 const { parentPort } = require('node:worker_threads');
 const xmlBuilder = new XMLBuilder({
 	ignoreAttributes: false,
