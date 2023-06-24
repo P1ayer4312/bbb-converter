@@ -42,7 +42,7 @@ async function downloadSharescreen(presentation, resolution) {
 				const end = Number(chunk.stop_timestamp);
 				const duration = Number((end - start).toFixed(2));
 				const ffmpegCommand =
-					`ffmpeg -y -i ${presentation.videoFilesUrls.deskshare} -ss ${start} ` +
+					`ffmpeg -y -ss ${start} -i ${presentation.videoFilesUrls.deskshare} ` +
 					`-t ${duration} -r 20 -vf scale=${resolution.width}:${resolution.height} ${fileLocation}`;
 
 				logs(`Downloading ${fileName}`, 'cyan');
