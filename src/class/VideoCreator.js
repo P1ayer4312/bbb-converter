@@ -42,8 +42,8 @@ class VideoCreator {
 					slide.resolution.height
 			);
 			chunk.timestamp = slide.timestamp;
-			// Add padding from the left side of cursors / shapes if the
-			// slide image width is too small for the wanted resolution
+			// Add padding from the left side of cursors if the slide
+			// image width is too small for the wanted resolution
 			const padding =
 				chunk.width < this.resolution.width
 					? (this.resolution.width - chunk.width) / 2
@@ -59,14 +59,10 @@ class VideoCreator {
 			if (slide.cursors !== null) {
 				for (let n = 0; n < slide.cursors.length; n++) {
 					const cursor = slide.cursors[n];
-					// Since we resized the slide size above, we'll have to fix
-					// the cursor offsets to work with the new slide resolution
-					const newPosX =
-						(chunk.width * cursor.position.posX) / slide.resolution.width;
-					//* Not sure about this one, looks better without it from my tests
-					// const newPosY =
-					// 	(chunk.height * cursor.position.posY) / slide.resolution.height;
-					const cursorX = (chunk.width * newPosX + padding).toFixed(2);
+					const cursorX = (
+						chunk.width * cursor.position.posX +
+						padding
+					).toFixed(2);
 					const cursorY = (chunk.height * cursor.position.posY).toFixed(2);
 					const start = (cursor.timestamp.start - offset).toFixed(2);
 					const end = (cursor.timestamp.end - offset).toFixed(2);

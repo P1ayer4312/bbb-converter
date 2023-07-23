@@ -7,7 +7,7 @@ const logs = require('../function/logs');
 const typedefs = require('../types/typedefs');
 
 /**
- * Wrapper class used for holding informations about
+ * Wrapper class used for holding information about
  * the presentation and its files
  */
 class PresentationInfo {
@@ -26,6 +26,7 @@ class PresentationInfo {
 			? dummyDataUrl
 			: `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
 
+		this.startTime = new Date();
 		this.url = url;
 		this.filesUrl = filesUrl;
 		this.presentationId = presentationId;
@@ -52,7 +53,7 @@ class PresentationInfo {
 		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml: typedefs.DeskshareXML}}
 		 */
 		this.xmlFiles = null;
-		this.outputFileName = 'presentation_export'
+		this.outputFileName = 'presentation_export';
 	}
 	getFullName() {
 		return `${this.title} - ${this.courseName}`;
@@ -119,6 +120,20 @@ class PresentationInfo {
 		}
 
 		this.xmlFiles = parsedXmlFiles;
+	}
+	/**
+	 * Returns elapsed time for the presentation to be converted
+	 */
+	getConversionDuration() {
+		const currentTime = new Date();
+		const hours = Math.abs(currentTime.getHours() - this.startTime.getHours());
+		const minutes = Math.abs(
+			currentTime.getMinutes() - this.startTime.getMinutes()
+		);
+		const seconds = Math.abs(
+			currentTime.getSeconds() - this.startTime.getSeconds()
+		);
+		return `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
 	}
 }
 

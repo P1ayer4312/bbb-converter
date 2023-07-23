@@ -5,8 +5,8 @@ const VideoCreator = require('./class/VideoCreator');
 async function main() {
 	console.clear();
 
-	const input = "BBB_URL_HERE"
-	
+	const input = 'BBB_URL_HERE';
+
 	const videoResolution = { width: 1920, height: 1080 };
 	const BBB = new PresentationInfo(input); //, 'http://localhost:3000'
 	BBB.createFolders();
@@ -28,6 +28,8 @@ async function main() {
 	VIDEO_CREATOR.renderChunks();
 	VIDEO_CREATOR.finalRender(BBB);
 
-	DATA_SORTER.cleanUp(BBB, input);
+	DATA_SORTER.createInfoFile(BBB, input);
+	DATA_SORTER.cleanUp(BBB);
 }
+
 main();

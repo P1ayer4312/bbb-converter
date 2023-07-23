@@ -302,13 +302,55 @@ class DataSorter {
 			}
 		);
 	}
-
 	/**
-	 * Remove unused files after the final video is exported
+	 * Create an info file with the presentation name, url and
+	 * presentation timestamps
 	 * @param {PresentationInfo} presentation
 	 * @param {String} presentationLink
 	 */
-	cleanUp(presentation, presentationLink) {
+	createInfoFile(presentation, presentationLink) {
+		logs('Creating presentation info file', 'cyan');
+
+		function getFormattedTime(value) {
+			const time = Number(value);
+			const formatPart = (part) => (part < 10 ? `0${part}` : part);
+			const hours = parseInt(time / 3600);
+			const minutes = parseInt((time - hours * 3600) / 60);
+			const seconds = Math.round(time % 60);
+			return `${hours}:${formatPart(minutes)}:${formatPart(seconds)}`;
+		}
+
+		const slides = presentation.xmlFiles.slidesXml.svg.image;
+		const timestamps = [];
+
+		for (let n = 0; n < slides.length; n++) {
+			const slide = slides[n];
+			let slideName;
+			if (slide['xlink:href'] == 'presentation/deskshare.png') {
+				slideName = `${slide.id.substring(5)} - Share screen`;
+			} else {
+				slideName = `${slide.id.substring(5)} - Slide`;
+			}
+
+			timestamps.push(`${getFormattedTime(slide.in)} | ${slideName}`);
+		}
+
+		const infoFileTemplate =
+			`${presentation.getFullName()}\n` +
+			`${presentationLink}\n\n` +
+			`Timestamps:\n` +
+			`${timestamps.join('\n')}`;
+
+		fs.writeFileSync(
+			path.resolve(presentation.folderLocation, `presentation_info.txt`),
+			infoFileTemplate
+		);
+	}
+	/**
+	 * Remove unused files after the final video is exported
+	 * @param {PresentationInfo} presentation
+	 */
+	cleanUp(presentation) {
 		if (config.cleanUpWhenDone) {
 			logs('Cleaning up unused files...', 'cyan');
 			fs.rmSync(presentation.dataLocation, { recursive: true, force: true });
@@ -320,13 +362,11 @@ class DataSorter {
 			`${presentation.outputFileName}.mp4`
 		);
 
-		// Create text file with presentation name and its url
-		fs.writeFileSync(
-			path.resolve(presentation.folderLocation, `presentation_info.txt`),
-			`${presentation.getFullName()}\n${presentationLink}`
+		logs(
+			`Done! Elapsed time: ${presentation.getConversionDuration()}`,
+			'green'
 		);
-
-		logs('Done! The presentation file can be found at:', 'green');
+		logs('The presentation file can be found at:', 'green');
 		logs(`"${fileLocation}"`, 'green');
 	}
 }
