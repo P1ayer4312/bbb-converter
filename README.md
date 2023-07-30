@@ -26,7 +26,7 @@ ffmpeg -version
 - Once you're done, save and close the file
 - Open a terminal inside the project and run this command: `npm run start`
 
-If you've done everything correctly, the script should start downloading all presentations assets.
+If you've done everything correctly, the script should start downloading all presentation assets.
 Depending on how many items need to be downloaded and generated the conversion time may vary, 
 so make sure that you have a stable internet connection and enough storage on your computer (~500 MB).
 
