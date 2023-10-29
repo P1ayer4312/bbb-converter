@@ -1,17 +1,28 @@
 const axios = require('axios');
 const { XMLParser } = require('fast-xml-parser');
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' });
+const xmlParser = new XMLParser({
+	ignoreAttributes: false,
+	attributeNamePrefix: '',
+});
 const logs = require('./logs');
 
 /**
  * Fetch XML file and return JS object
- * @param {String} url 
- * @returns 
+ * @param {string} url
+ * @param {boolean} rawXMLformat
+ * @returns
  */
-function fetchXMLfile(url) {
+function fetchXMLfile(url, rawXMLformat) {
 	logs(`Fetching ${url}`, 'cyan');
-	return axios.get(url)
-		.then(res => xmlParser.parse(res.data))
+	return axios
+		.get(url)
+		.then((res) => {
+			if (rawXMLformat) {
+				return res.data;
+			}
+
+			return xmlParser.parse(res.data);
+		})
 		.catch(() => {
 			throw new Error('Failed ' + url);
 		});

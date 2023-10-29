@@ -3,23 +3,22 @@ const DataSorter = require('./DataSorter');
 // eslint-disable-next-line no-unused-vars
 const PresentationInfo = require('./PresentationInfo');
 // eslint-disable-next-line no-unused-vars
-const typedefs = require('../types/typedefs');
+const T = require('../types/typedefs');
 const logs = require('../function/logs');
 const fs = require('node:fs');
 const path = require('node:path');
 const executeCommand = require('../function/executeCommand');
 const config = require('../../config.json');
+const rootDir = path.resolve();
 
 /**
  * Wrapper class for creating videos
  */
 class VideoCreator {
-	/** @param {typedefs.Resolution} resolution */
+	/** @param {T.Resolution} resolution */
 	constructor(resolution) {
 		logs('Creating "VideoCreator" instance', 'yellow');
-		/**
-		 * @type {Array.<typedefs.Chunk>}
-		 */
+		/** @type {T.Chunk[]} */
 		this.sequence = [];
 		this.resolution = resolution;
 	}
@@ -30,10 +29,9 @@ class VideoCreator {
 	 */
 	createSequence(dataSorter, presentation) {
 		for (let slide of dataSorter.slides) {
-			/**
-			 * @type {typedefs.Chunk}
-			 */
+			/** @type {T.Chunk} */
 			const chunk = {};
+
 			// 'offset' is used for correcting chunk timings for elements
 			const offset = slide.timestamp.start;
 			chunk.height = this.resolution.height;
@@ -42,6 +40,7 @@ class VideoCreator {
 					slide.resolution.height
 			);
 			chunk.timestamp = slide.timestamp;
+
 			// Add padding from the left side of cursors if the slide
 			// image width is too small for the wanted resolution
 			const padding =
@@ -49,7 +48,9 @@ class VideoCreator {
 					? (this.resolution.width - chunk.width) / 2
 					: 0;
 			const complexFilterBuilder = [];
-			const inputBuilder = [presentation.cursorLocation];
+			const inputBuilder = [
+				path.relative(rootDir, presentation.cursorLocation),
+			];
 			// Center slide if it's smaller than the desired resolution
 			const slideDefs =
 				`[0]pad=width=${this.resolution.width}:height=${this.resolution.height}:x=-1:y=-1:color=black,setsar=1,` +
@@ -92,26 +93,25 @@ class VideoCreator {
 						(n === 0
 							? `[v${lastCursor}];[v${lastCursor}]`
 							: `[v${lastCursor + n}]`) +
-							`[${n + 2}:v]overlay=0:0:enable=` +
-							`'between(t,${start},${end})'` +
+							`[${n + 2}:v]overlay=0:0:enable='between(t,${start},${end})'` +
 							(n < slide.shapes.length - 1 ? `[v${lastCursor + n + 1}];` : ``)
 					);
-					inputBuilder.push(shape.location);
+					inputBuilder.push(path.relative(rootDir, shape.location));
 				}
 			}
 
 			const complexFilterFileName = `${slide.id}.txt`;
-			const complexFilterFileLocation = path.resolve(
-				presentation.dataLocation,
-				complexFilterFileName
+			const complexFilterFileLocation = path.relative(
+				rootDir,
+				path.resolve(presentation.dataLocation, complexFilterFileName)
 			);
-			const slideImageLocation = path.resolve(
-				presentation.dataLocation,
-				slide.fileName
+			const slideImageLocation = path.relative(
+				rootDir,
+				path.resolve(presentation.dataLocation, slide.fileName)
 			);
-			const videoChunkLocation = path.resolve(
-				presentation.dataLocation,
-				`${slide.id}.mp4`
+			const videoChunkLocation = path.relative(
+				rootDir,
+				path.resolve(presentation.dataLocation, `${slide.id}.mp4`)
 			);
 			chunk.id = slide.id;
 			chunk.duration = Number(

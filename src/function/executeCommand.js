@@ -3,7 +3,7 @@ const config = require('../../config.json');
 
 /**
  * Execute shell command
- * @param {String} command
+ * @param {string} command
  */
 function executeCommand(command) {
 	try {

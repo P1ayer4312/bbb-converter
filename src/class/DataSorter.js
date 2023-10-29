@@ -1,12 +1,13 @@
 // eslint-disable-next-line no-unused-vars
 const PresentationInfo = require('./PresentationInfo');
 // eslint-disable-next-line no-unused-vars
-const typedefs = require('../types/typedefs');
+const T = require('../types/typedefs');
 const logs = require('../function/logs');
 const path = require('node:path');
 const fs = require('node:fs');
 const createWorker = require('../function/createWorker');
 const executeCommand = require('../function/executeCommand');
+const sliceArrayToMultiple = require('../function/sliceArrayToMultiple');
 const config = require('../../config.json');
 
 /**
@@ -15,13 +16,9 @@ const config = require('../../config.json');
 class DataSorter {
 	constructor() {
 		logs('Creating "DataSorter" instance', 'yellow');
-		/**
-		 * @type {Array.<typedefs.Slide>|null}
-		 */
+		/**@type {T.Slide[] | null} */
 		this.slides = null;
-		/**
-		 * @type {Array.<typedefs.SharescreenChunks>|[]}
-		 */
+		/** @type {T.SharescreenChunks[] | []} */
 		this.shareScreenChunks = [];
 	}
 	/**
@@ -38,9 +35,7 @@ class DataSorter {
 			if (imageHref == 'presentation/deskshare.png') {
 				continue;
 			}
-			/**
-			 * @type {typedefs.Slide}
-			 */
+			/**@type {T.Slide} */
 			const slideInfo = {
 				id: image.id,
 				timestamp: {
@@ -173,75 +168,9 @@ class DataSorter {
 		});
 	}
 	/**
-	 * Download sharescreen parts
-	 * @param {PresentationInfo} presentation
-	 * @returns {Promise<void>}
-	 */
-	async downloadSharescreen(presentation) {
-		/*
-		- Because of the way sharescreen is stored, it's just a large file filled
-			with empty space with occasional chunks of sharescreen, so we make 
-			this function only download those chunks instead of the whole video.
-		- If there are no 'chunks' we download the whole video.
-		*/
-		logs('Downloading sharescreen chunks', 'cyan');
-		return await new Promise((resolve) => {
-			if (presentation.xmlFiles.deskshareXml.recording?.event) {
-				/**
-				 * This part is repeating, so we make it a function
-				 * @param {typedefs.DeskshareRecordingEventValues} chunk
-				 * @param {Number} index
-				 */
-				const downloadChunk = (chunk, index) => {
-					const fileName = `SCREEN_${index}.mp4`;
-					const fileLocation = path.resolve(
-						presentation.dataLocation,
-						fileName
-					);
-
-					if (fs.existsSync(fileLocation)) {
-						return;
-					}
-
-					const start = Number(chunk.start_timestamp);
-					const end = Number(chunk.stop_timestamp);
-					const duration = Number((end - start).toFixed(2));
-					const ffmpegCommand =
-						`ffmpeg -y -i ${presentation.videoFilesUrls.deskshare} -ss ${start} ` +
-						`-t ${duration} -vf scale=1920:1080 ${fileLocation}`;
-
-					logs(`Downloading ${fileName}`, 'cyan');
-					executeCommand(ffmpegCommand);
-					this.shareScreenChunks.push({
-						start,
-						end,
-						duration,
-						fileLocation,
-						fileName,
-					});
-				};
-
-				const event = presentation.xmlFiles.deskshareXml.recording.event;
-				if (Array.isArray(event)) {
-					for (let n = 0; n < event.length; n++) {
-						downloadChunk(event[n], n + 1);
-					}
-				} else {
-					downloadChunk(event, 1);
-				}
-
-				logs('Sharescreen download complete', 'magenta');
-			} else {
-				logs('No sharescreen detected', 'magenta');
-			}
-
-			resolve();
-		});
-	}
-	/**
 	 * Download presentation slides as Worker
-	 * @param {String} downloadFolder
-	 * @param {typedefs.Resolution} resolution
+	 * @param {string} downloadFolder
+	 * @param {T.Resolution} resolution
 	 */
 	downloadSlidesWorker(downloadFolder, resolution) {
 		return createWorker(
@@ -257,19 +186,43 @@ class DataSorter {
 	/**
 	 * Export drawn shapes from svg to png format as Worker
 	 * @param {PresentationInfo} presentation
-	 * @param {typedefs.Resolution} resolution
+	 * @param {T.Resolution} resolution
 	 */
 	exportShapesToPngWorker(presentation, resolution) {
-		return createWorker(
-			'./src/worker/exportShapesToPngWorker.js',
-			{
-				presentation,
-				resolution,
-				slides: this.slides,
-			},
-			'Drawing shapes complete'
+		if (config.numShapesExportWorkers === 1) {
+			return createWorker(
+				'./src/worker/exportShapesToPngWorker.js',
+				{
+					presentation,
+					resolution,
+					slides: this.slides,
+					sliceIndex: -1,
+				},
+				'Drawing shapes complete'
+			);
+		}
+
+		return Promise.all(
+			Array.from(Array(config.numShapesExportWorkers).keys()).map((index) => {
+				return createWorker(
+					'./src/worker/exportShapesToPngWorker.js',
+					{
+						presentation,
+						resolution,
+						slides: this.slides,
+						sliceIndex: index,
+					},
+					'Drawing shapes complete'
+				);
+			})
 		);
 	}
+	/**
+	 * Export drawn shapes from svg to png format as separate Node process
+	 * @param {PresentationInfo} presentation
+	 * @param {T.Resolution} resolution
+	 */
+	exportShapesToPngProcess(presentation, resolution) {}
 	/**
 	 * Extract and download audio from webcam as Worker
 	 * @param {PresentationInfo} presentation
@@ -287,7 +240,7 @@ class DataSorter {
 	/**
 	 * Download sharescreen parts as Worker
 	 * @param {PresentationInfo} presentation
-	 * @param {typedefs.Resolution} resolution
+	 * @param {T.Resolution} resolution
 	 */
 	async downloadSharescreenWorker(presentation, resolution) {
 		return createWorker(
@@ -306,7 +259,7 @@ class DataSorter {
 	 * Create an info file with the presentation name, url and
 	 * presentation timestamps
 	 * @param {PresentationInfo} presentation
-	 * @param {String} presentationLink
+	 * @param {string} presentationLink
 	 */
 	createInfoFile(presentation, presentationLink) {
 		logs('Creating presentation info file', 'cyan');

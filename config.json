@@ -2,5 +2,7 @@
 	"consoleLogStatus": true,
 	"ffmpegStatus": true,
 	"reEncodeFinalConcat": false,
-	"cleanUpWhenDone": false
+	"cleanUpWhenDone": false,
+	"numShapesExportWorkers": 2,
+	"numChunkRendererWorkers": 2
 }

@@ -2,7 +2,7 @@ const config = require('../../config.json');
 const chalk = require('chalk');
 /**
  * Simple function for tracking steps during debugging
- * @param {String} message
+ * @param {string} message
  * @param {('cyan'|'yellow'|'magenta'|'green'|'red')} color
  */
 function log(message, color) {

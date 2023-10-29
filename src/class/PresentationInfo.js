@@ -4,31 +4,30 @@ const cheerio = require('cheerio');
 const fetchXMLfile = require('../function/fetchXMLfile');
 const logs = require('../function/logs');
 // eslint-disable-next-line no-unused-vars
-const typedefs = require('../types/typedefs');
+const T = require('../types/typedefs');
 
 /**
  * Wrapper class used for holding information about
  * the presentation and its files
  */
 class PresentationInfo {
-	/**
-	 * @param {String} url
-	 * @param {String} dummyDataUrl used for testing
-	 */
-	constructor(url, dummyDataUrl) {
+	/** @param {string} url */
+	constructor(url) {
 		logs('Creating "PresentationInfo" instance', 'yellow');
 		const inputUrl = new URL(url);
 		const presentationId = inputUrl.pathname.substring(
 			inputUrl.pathname.lastIndexOf('/') + 1
 		);
 		const folderLocation = path.resolve('presentations', `p_${presentationId}`);
-		const filesUrl = dummyDataUrl
-			? dummyDataUrl
-			: `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
+		const originalFilesUrl = `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
+		const filesUrl = process.argv.includes('--local')
+			? 'http://localhost:3000'
+			: originalFilesUrl;
 
 		this.startTime = new Date();
 		this.url = url;
 		this.filesUrl = filesUrl;
+		this.originalFilesUrl = originalFilesUrl;
 		this.presentationId = presentationId;
 		this.folderLocation = folderLocation;
 		this.dataLocation = path.resolve(folderLocation, 'data');
@@ -37,7 +36,7 @@ class PresentationInfo {
 		this.filesUrls = {
 			cursorXml: `${filesUrl}/cursor.xml`,
 			slidesXml: `${filesUrl}/shapes.svg`,
-			panZoomXml: `${filesUrl}/panzooms.xml`,
+			panZoomsXml: `${filesUrl}/panzooms.xml`,
 			metadataXml: `${filesUrl}/metadata.xml`,
 			deskshareXml: `${filesUrl}/deskshare.xml`,
 		};
@@ -50,7 +49,7 @@ class PresentationInfo {
 		this.duration = 0;
 		/**
 		 * Raw xml files in json format
-		 * @type {{cursorXml, slidesXml, panZoomXml, metadataXml, deskshareXml: typedefs.DeskshareXML}}
+		 * @type {{cursorXml, slidesXml, panZoomsXml, metadataXml, deskshareXml: T.DeskshareXML}}
 		 */
 		this.xmlFiles = null;
 		this.outputFileName = 'presentation_export';
@@ -112,10 +111,10 @@ class PresentationInfo {
 	/**
 	 * Fetch current xml files and store them inside the object
 	 */
-	async fetchAllXmlFiles() {
+	async fetchAllXmlFiles(rawXMLformat = false) {
 		const parsedXmlFiles = {};
 		for (let name of Object.keys(this.filesUrls)) {
-			const temp = await fetchXMLfile(this.filesUrls[name]);
+			const temp = await fetchXMLfile(this.filesUrls[name], rawXMLformat);
 			parsedXmlFiles[name] = temp;
 		}
 
