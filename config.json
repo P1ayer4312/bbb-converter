@@ -4,5 +4,6 @@
 	"reEncodeFinalConcat": false,
 	"cleanUpWhenDone": false,
 	"numShapesExportWorkers": 2,
+	"numShapesExportProcesses": 2,
 	"numChunkRendererWorkers": 2
 }

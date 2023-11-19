@@ -31,7 +31,7 @@ async function exportShapesToPngFunc(
 		let newShapesSvg = shapesSvg;
 		if (sliceIndex !== -1) {
 			const sliceLength = Math.ceil(
-				shapesSvg.length / config.numShapesExportWorkers
+				shapesSvg.length / config.numShapesExportWorkers //TODO: Remove
 			);
 			const slicedShapes = sliceArrayToMultiple(shapesSvg, sliceLength);
 			newShapesSvg = slicedShapes[sliceIndex] || [];

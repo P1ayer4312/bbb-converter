@@ -83,4 +83,12 @@
  * @prop {string} fileName
  */
 
+/**
+ * Child process props
+ * @typedef {object} CreateShapeExportProcessesProps
+ * @prop {string} filePath
+ * @prop {Resolution} resolution
+ * @prop {Slide[]} slides
+ */
+
 module.exports.unused = {};

@@ -9,6 +9,7 @@ const createWorker = require('../function/createWorker');
 const executeCommand = require('../function/executeCommand');
 const sliceArrayToMultiple = require('../function/sliceArrayToMultiple');
 const config = require('../../config.json');
+const createShapeExportProcesses = require('../function/createShapeExportProcesses');
 
 /**
  * Wrapper class for managing and sorting slides' data
@@ -108,6 +109,7 @@ class DataSorter {
 
 		this.slides = slides;
 	}
+
 	/**
 	 * Groups cursors by slide start and end
 	 * @param {PresentationInfo} presentation
@@ -146,6 +148,7 @@ class DataSorter {
 			slide.cursors = cursors.length > 0 ? cursors : null;
 		}
 	}
+
 	/**
 	 * Extract and download audio from webcam
 	 * @param {PresentationInfo} presentation
@@ -167,6 +170,7 @@ class DataSorter {
 			resolve();
 		});
 	}
+
 	/**
 	 * Download presentation slides as Worker
 	 * @param {string} downloadFolder
@@ -183,6 +187,7 @@ class DataSorter {
 			'Downloading slides complete'
 		);
 	}
+
 	/**
 	 * Export drawn shapes from svg to png format as Worker
 	 * @param {PresentationInfo} presentation
@@ -190,6 +195,7 @@ class DataSorter {
 	 */
 	exportShapesToPngWorker(presentation, resolution) {
 		if (config.numShapesExportWorkers === 1) {
+			// TODO: Remove
 			return createWorker(
 				'./src/worker/exportShapesToPngWorker.js',
 				{
@@ -217,12 +223,18 @@ class DataSorter {
 			})
 		);
 	}
+
 	/**
 	 * Export drawn shapes from svg to png format as separate Node process
 	 * @param {PresentationInfo} presentation
 	 * @param {T.Resolution} resolution
 	 */
-	exportShapesToPngProcess(presentation, resolution) {}
+	exportShapesToPngProcess(presentation, resolution) {
+		return createShapeExportProcesses({
+			filePath: path.resolve('src', 'process', 'test.js'),
+		});
+	}
+
 	/**
 	 * Extract and download audio from webcam as Worker
 	 * @param {PresentationInfo} presentation
@@ -237,6 +249,7 @@ class DataSorter {
 			'Audio download complete'
 		);
 	}
+
 	/**
 	 * Download sharescreen parts as Worker
 	 * @param {PresentationInfo} presentation
@@ -255,6 +268,7 @@ class DataSorter {
 			}
 		);
 	}
+
 	/**
 	 * Create an info file with the presentation name, url and
 	 * presentation timestamps
@@ -299,6 +313,7 @@ class DataSorter {
 			infoFileTemplate
 		);
 	}
+
 	/**
 	 * Remove unused files after the final video is exported
 	 * @param {PresentationInfo} presentation

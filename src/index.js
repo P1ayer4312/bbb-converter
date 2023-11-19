@@ -21,7 +21,8 @@ async function main() {
 		// 	DATA_SORTER.downloadAudioWorker(BBB),
 		// 	DATA_SORTER.downloadSharescreenWorker(BBB, videoResolution),
 		// 	DATA_SORTER.downloadSlidesWorker(BBB.dataLocation, videoResolution),
-		DATA_SORTER.exportShapesToPngWorker(BBB, videoResolution),
+		// DATA_SORTER.exportShapesToPngWorker(BBB, videoResolution),
+		DATA_SORTER.exportShapesToPngProcess(),
 	]);
 
 	// const VIDEO_CREATOR = new VideoCreator(videoResolution);
@@ -31,6 +32,8 @@ async function main() {
 
 	// DATA_SORTER.createInfoFile(BBB, input);
 	// DATA_SORTER.cleanUp(BBB);
+
+	console.log('shit"s done');
 }
 
 main();
