@@ -14,13 +14,16 @@ class PresentationInfo {
 	/** @param {string} url */
 	constructor(url) {
 		logs('Creating "PresentationInfo" instance', 'yellow');
+		/** @type {boolean} */
+		this.isLocalDevEnv = process.argv.includes('--local');
+
 		const inputUrl = new URL(url);
 		const presentationId = inputUrl.pathname.substring(
 			inputUrl.pathname.lastIndexOf('/') + 1
 		);
 		const folderLocation = path.resolve('presentations', `p_${presentationId}`);
 		const originalFilesUrl = `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
-		const filesUrl = process.argv.includes('--local')
+		const filesUrl = this.isLocalDevEnv
 			? 'http://localhost:3000'
 			: originalFilesUrl;
 

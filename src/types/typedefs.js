@@ -89,6 +89,15 @@
  * @prop {string} filePath
  * @prop {Resolution} resolution
  * @prop {Slide[]} slides
+ * @prop {import("../class/PresentationInfo")} presentation
+ */
+
+/**
+ * Shapes export function params
+ * @callback ExportShapesToPngFuncProps
+ * @param {PresentationInfo} presentation
+ * @param {Resolution} resolution
+ * @param {Slide[] | null} slides
  */
 
 module.exports.unused = {};

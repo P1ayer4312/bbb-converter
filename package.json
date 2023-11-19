@@ -30,7 +30,6 @@
 		"cheerio": "^1.0.0-rc.12",
 		"fast-xml-parser": "^4.2.7",
 		"jimp": "^0.22.10",
-		"serve": "^14.2.1",
-		"svg-to-img": "^2.0.9"
+		"serve": "^14.2.1"
 	}
 }

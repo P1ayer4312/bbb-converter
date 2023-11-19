@@ -1,7 +1,8 @@
 const { XMLBuilder } = require('fast-xml-parser');
 const Jimp = require('jimp');
-const { parentPort } = require('node:worker_threads');
-const { createCanvas, loadImage } = require('canvas');
+const logs = require('./logs');
+const { Buffer } = require('node:buffer');
+const { createCanvas, loadImage, Image } = require('canvas');
 const xmlBuilder = new XMLBuilder({
 	ignoreAttributes: false,
 	attributeNamePrefix: '',
@@ -24,7 +25,8 @@ async function drawSvgToPng(
 	data,
 	path
 ) {
-	parentPort.postMessage(`Drawing ${data.id}`);
+	logs(`Drawing ${data.id}`, 'cyan');
+	// eslint-disable-next-line no-async-promise-executor
 	return new Promise(async (resolve, reject) => {
 		let pngBuffer;
 
@@ -91,14 +93,30 @@ async function convertToPngBuffer(data, type, width, height) {
 			return canvas.toBuffer('image/png');
 		});
 	} else if (type === 'poll') {
-		buffer = await loadImage(data.image.href).then((img) => {
+		buffer = await loadImage(data.image.href).then(async (img) => {
+			// The poll is stored rotated for some reason and I ain't gonna
+			// do the math thing, so imma let ma boi Jimp do the rotation
+			const pollWidth = parseInt(data.image.width);
+			const pollHeight = parseInt(data.image.height);
+			const pollCanvas = createCanvas(pollWidth, pollHeight);
+			const pollCanvasCtx = pollCanvas.getContext('2d');
+
+			pollCanvasCtx.fillStyle = 'white';
+			pollCanvasCtx.fillRect(0, 0, pollWidth, pollHeight);
+			pollCanvasCtx.drawImage(img, 0, 0, pollWidth, pollHeight);
+
+			const pollJimp = await Jimp.read(pollCanvas.toBuffer('image/png'));
+			const pollImg = new Image();
+			pollImg.src = await pollJimp.rotate(270).getBase64Async(Jimp.MIME_PNG);
+
 			ctx.drawImage(
-				img,
-				parseInt(data.image.x),
-				parseInt(data.image.y),
-				parseInt(data.image.width),
-				parseInt(data.image.height)
+				pollImg,
+				width - pollHeight,
+				height - pollWidth,
+				pollHeight,
+				pollWidth
 			);
+
 			return canvas.toBuffer('image/png');
 		});
 	}

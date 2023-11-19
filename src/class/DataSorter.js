@@ -231,7 +231,10 @@ class DataSorter {
 	 */
 	exportShapesToPngProcess(presentation, resolution) {
 		return createShapeExportProcesses({
-			filePath: path.resolve('src', 'process', 'test.js'),
+			filePath: path.resolve('src', 'process', 'exportShapesToPngProcess.js'),
+			resolution,
+			slides: this.slides,
+			presentation,
 		});
 	}
 

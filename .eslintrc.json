@@ -8,5 +8,8 @@
 	"parserOptions": {
 		"ecmaVersion": "latest"
 	},
-	"rules": {}
+	"rules": {},
+	"globals": {
+		"process": true
+	}
 }

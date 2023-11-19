@@ -3,14 +3,20 @@
 /**
  * Remove elements that prevent the svg from rendering
  * @param {object} svg
- * @param {PresentationInfo} presentation
+ * @param {import("../class/PresentationInfo")} presentation
  */
 async function patchSvg(svg, presentation) {
 	svg.style = svg.style.replace('visibility:hidden', '');
 
 	if (svg.shape?.includes('poll')) {
 		// Patch the url location from where the poll is being fetched
-		svg.image.href = `${presentation.filesUrl}/${svg.image['xlink:href']}`;
+		// Since polls are not downloaded with the dummy data, we need
+		// to use the original url to fetch the poll
+		const url = presentation.isLocalDevEnv
+			? presentation.originalFilesUrl
+			: presentation.filesUrl;
+
+		svg.image.href = `${url}/${svg.image['xlink:href']}`;
 	}
 
 	if (svg.switch) {
