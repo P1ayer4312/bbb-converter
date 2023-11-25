@@ -10,7 +10,7 @@ const shareScreenChunks = [];
 
 /**
  * Download sharescreen parts
- * @param {PresentationInfo} presentation
+ * @param {T.PresentationInfo} presentation
  * @param {T.Resolution} resolution
  * @returns {Promise<void>}
  */

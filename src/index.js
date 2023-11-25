@@ -17,16 +17,16 @@ async function main() {
 	const DATA_SORTER = new DataSorter();
 	DATA_SORTER.mapSlidesInfo(BBB);
 	DATA_SORTER.groupCursorsByTime(BBB);
-	await Promise.allSettled([
-		// 	DATA_SORTER.downloadAudioWorker(BBB),
-		// 	DATA_SORTER.downloadSharescreenWorker(BBB, videoResolution),
-		// 	DATA_SORTER.downloadSlidesWorker(BBB.dataLocation, videoResolution),
-		// DATA_SORTER.exportShapesToPngWorker(BBB, videoResolution),
-		DATA_SORTER.exportShapesToPngProcess(BBB, videoResolution),
-	]);
+	// await Promise.allSettled([
+	// 	DATA_SORTER.downloadAudioWorker(BBB),
+	// 	DATA_SORTER.downloadSharescreenWorker(BBB, videoResolution),
+	// 	DATA_SORTER.downloadSlidesWorker(BBB.dataLocation, videoResolution),
+	// 	// DATA_SORTER.exportShapesToPngWorker(BBB, videoResolution),
+	// 	DATA_SORTER.exportShapesToPngProcess(BBB, videoResolution),
+	// ]);
 
-	// const VIDEO_CREATOR = new VideoCreator(videoResolution);
-	// VIDEO_CREATOR.createSequence(DATA_SORTER, BBB);
+	const VIDEO_CREATOR = new VideoCreator(videoResolution);
+	VIDEO_CREATOR.createSequence(DATA_SORTER, BBB);
 	// VIDEO_CREATOR.renderChunks();
 	// VIDEO_CREATOR.finalRender(BBB);
 

@@ -5,14 +5,12 @@ const drawSvgToPng = require('../function/drawSvgToPng');
 const patchSvg = require('../function/patchSvg');
 // eslint-disable-next-line no-unused-vars
 const T = require('../types/typedefs');
-// eslint-disable-next-line no-unused-vars
-const PresentationInfo = require('../class/PresentationInfo');
 const sliceArrayToMultiple = require('../function/sliceArrayToMultiple');
 const config = require('../../config.json');
 
 /**
  * Export drawn shapes from svg to png format
- * @param {PresentationInfo} presentation
+ * @param {T.PresentationInfo} presentation
  * @param {T.Resolution} resolution
  * @param {T.Slide[] | null} slides
  * @param {number} sliceIndex

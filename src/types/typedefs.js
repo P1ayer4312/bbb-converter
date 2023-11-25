@@ -3,6 +3,12 @@
  */
 
 /**
+ * @typedef {import("../class/PresentationInfo")} PresentationInfo
+ * @typedef {import("../class/DataSorter")} DataSorter
+ * @typedef {import("../class/VideoCreator")} VideoCreator
+ */
+
+/**
  * Resolution of the video
  * @typedef {object} Resolution
  * @prop {number} width
@@ -53,9 +59,11 @@
  * @prop {number} width
  * @prop {number} height
  * @prop {Timestamp} timestamp
- * @prop {string} command FFMPEG command
+ * @prop {string} command FFMPEG command // TODO: Might need to be removed
+ * @prop {string[][]} commands
  * @prop {number} duration Chunk duration in seconds
- * @prop {string} fileLocation
+ * @prop {string} fileLocation  // TODO: Might need to be removed
+ * @prop {string[]} filesLocations
  */
 
 /**

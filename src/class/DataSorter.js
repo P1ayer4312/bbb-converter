@@ -1,13 +1,10 @@
 // eslint-disable-next-line no-unused-vars
-const PresentationInfo = require('./PresentationInfo');
-// eslint-disable-next-line no-unused-vars
 const T = require('../types/typedefs');
 const logs = require('../function/logs');
 const path = require('node:path');
 const fs = require('node:fs');
 const createWorker = require('../function/createWorker');
 const executeCommand = require('../function/executeCommand');
-const sliceArrayToMultiple = require('../function/sliceArrayToMultiple');
 const config = require('../../config.json');
 const createShapeExportProcesses = require('../function/createShapeExportProcesses');
 
@@ -24,7 +21,7 @@ class DataSorter {
 	}
 	/**
 	 * Map slides values from the shapes xml file and store them
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 */
 	mapSlidesInfo(presentation) {
 		const shapesXml = presentation.xmlFiles.slidesXml;
@@ -112,7 +109,7 @@ class DataSorter {
 
 	/**
 	 * Groups cursors by slide start and end
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 */
 	groupCursorsByTime(presentation) {
 		// Parse xml cursors
@@ -151,7 +148,7 @@ class DataSorter {
 
 	/**
 	 * Extract and download audio from webcam
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @returns {Promise<void>}
 	 */
 	async downloadAudio(presentation) {
@@ -190,7 +187,7 @@ class DataSorter {
 
 	/**
 	 * Export drawn shapes from svg to png format as Worker
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @param {T.Resolution} resolution
 	 */
 	exportShapesToPngWorker(presentation, resolution) {
@@ -226,7 +223,7 @@ class DataSorter {
 
 	/**
 	 * Export drawn shapes from svg to png format as separate Node process
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @param {T.Resolution} resolution
 	 */
 	exportShapesToPngProcess(presentation, resolution) {
@@ -240,7 +237,7 @@ class DataSorter {
 
 	/**
 	 * Extract and download audio from webcam as Worker
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @returns {Promise<void>}
 	 */
 	downloadAudioWorker(presentation) {
@@ -255,7 +252,7 @@ class DataSorter {
 
 	/**
 	 * Download sharescreen parts as Worker
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @param {T.Resolution} resolution
 	 */
 	async downloadSharescreenWorker(presentation, resolution) {
@@ -275,7 +272,7 @@ class DataSorter {
 	/**
 	 * Create an info file with the presentation name, url and
 	 * presentation timestamps
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @param {string} presentationLink
 	 */
 	createInfoFile(presentation, presentationLink) {
@@ -319,7 +316,7 @@ class DataSorter {
 
 	/**
 	 * Remove unused files after the final video is exported
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 */
 	cleanUp(presentation) {
 		if (config.cleanUpWhenDone) {
