@@ -29,8 +29,9 @@ class VideoCreator {
 	createSequence(dataSorter, presentation) {
 		const commandSplits = splitChunks(dataSorter, presentation);
 		this.splitChunks = commandSplits;
+
 		for (let slide of dataSorter.slides) {
-			/** @type {typedefs.Chunk} */
+			/** @type {T.Chunk} */
 			const chunk = {};
 			// 'offset' is used for correcting chunk timings for elements
 			const offset = slide.timestamp.start;
@@ -94,16 +95,8 @@ class VideoCreator {
 				// Check if there are any shapes present
 				if (slide.shapes !== null) {
 					const lastCursor = complexFilterBuilder.length;
-					const shapes = slide.shapes
-						.filter((el) => {
-							// Either find elements that are withing the time range, or find
-							// all that start before the split end
-							return (
-								(el.timestamp.start >= slideSplit.splitStart &&
-									el.timestamp.end <= slideSplit.splitEnd) ||
-								el.timestamp.start < slideSplit.splitEnd
-							);
-						})
+					const shapes = [...slide.shapes]
+						.splice(slideSplit.splitRange.from, slideSplit.splitRange.count)
 						.map((el) => {
 							// Fix end time to not go over the chunk duration
 							if (el.timestamp.end > slideSplit.splitEnd) {

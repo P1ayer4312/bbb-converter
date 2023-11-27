@@ -37,7 +37,9 @@ function splitChunks(dataSorter, presentation) {
 		);
 
 		if (slide.shapes !== null) {
-			for (let shape of slide.shapes) {
+			let splitRangeFrom = 0;
+			for (let n = 0; n < slide.shapes.length; n++) {
+				const shape = slide.shapes[n];
 				command = createFFmpegCommand(
 					slideImageLocation,
 					inputBuilder,
@@ -57,7 +59,13 @@ function splitChunks(dataSorter, presentation) {
 						splitStart,
 						splitEnd: shape.timestamp.start,
 						videoChunkLocation,
+						splitRange: {
+							from: splitRangeFrom,
+							count: n - splitRangeFrom,
+						},
 					});
+
+					splitRangeFrom = n;
 
 					fs.writeFileSync(
 						path.resolve(
@@ -103,8 +111,12 @@ function splitChunks(dataSorter, presentation) {
 				command,
 				index: splitIndex,
 				splitStart,
-				splitEnd: lastShapes.timestamp.start,
+				splitEnd: lastShapes.timestamp.end - splitStart,
 				videoChunkLocation,
+				splitRange: {
+					from: splitRangeFrom,
+					count: dataSorter.slides.length - splitRangeFrom,
+				},
 			});
 
 			fs.writeFileSync(
