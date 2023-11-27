@@ -97,7 +97,7 @@
  * @prop {string} filePath
  * @prop {Resolution} resolution
  * @prop {Slide[]} slides
- * @prop {import("../class/PresentationInfo")} presentation
+ * @prop {PresentationInfo} presentation
  */
 
 /**
@@ -106,6 +106,18 @@
  * @param {PresentationInfo} presentation
  * @param {Resolution} resolution
  * @param {Slide[] | null} slides
+ */
+
+/**
+ * @typedef {object} ChunkSplitDetails
+ * @prop {string} id
+ * @prop {number} splitStart
+ * @prop {number} splitEnd
+ * @prop {string} command
+ * @prop {number} index
+ * @prop {string} videoChunkLocation
+ *
+ * @typedef {Object.<string, ChunkSplitDetails[]>} ChunkSplits
  */
 
 module.exports.unused = {};

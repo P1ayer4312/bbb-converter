@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const executeCommand = require('../function/executeCommand');
 const config = require('../../config.json');
-const MAX_COMMAND_LENGTH = 7500; // Left breathing room ~600 chars
+const splitChunks = require('../function/splitChunks');
 
 /**
  * Wrapper class for creating videos
@@ -17,8 +17,8 @@ class VideoCreator {
 		/** @type {T.Chunk[]} */
 		this.sequence = [];
 		this.resolution = resolution;
-		/** @type {string[][]} */
-		this.chunksCommands = [];
+		/** @type {T.ChunkSplits | null} */
+		this.splitChunks = null;
 	}
 
 	/**
@@ -27,135 +27,139 @@ class VideoCreator {
 	 * @param {T.PresentationInfo} presentation
 	 */
 	createSequence(dataSorter, presentation) {
-		// Used for keeping track of the input chain order
-		let itemIndex = 0;
-
-		// Track the command length
-		let commandLength = FFMPEG_BASE.length + presentation.cursorLocation.length;
-		let chunkCounter = 0;
-
-		const checkCommandLength = () => {
-			if (commandLength >= MAX_COMMAND_LENGTH) {
-				commandLength = FFMPEG_BASE.length + presentation.cursorLocation.length;
-				itemIndex = 0;
-				chunkCounter += 1;
-				return true; // Export current complex filter and start a new one
-			}
-
-			return false; // Do not reset anything
-		};
-
-		// Center slide if it's smaller than the desired resolution
-		const slideDefs =
-			`[0]pad=width=${this.resolution.width}:height=${this.resolution.height}:x=-1:y=-1:color=black,setsar=1,` +
-			`scale=${this.resolution.width}:${this.resolution.height}:force_original_aspect_ratio=1[v0];[v0]`;
-
-		// Used for getting the starting length of the initial ffmpeg command
-		const FFMPEG_BASE = `ffmpeg -y -loop 1 -r 20 -i "" -i "" -t 4312 -filter_complex_script "" ""`;
-
+		const commandSplits = splitChunks(dataSorter, presentation);
+		this.splitChunks = commandSplits;
 		for (let slide of dataSorter.slides) {
-			chunkCounter = 0;
-			let offset = slide.timestamp.start;
-			const slideImageLocation = path.resolve(
-				presentation.dataLocation,
-				slide.fileName
-			);
-
-			/** @type {string[]} */
-			let inputBuilder = [presentation.cursorLocation];
-
-			/** @type {string[]} */
-			let complexFilterBuilder = [slideDefs];
-
-			/** @type {T.Chunk} */
+			/** @type {typedefs.Chunk} */
 			const chunk = {};
-			chunk.id = slide.id;
+			// 'offset' is used for correcting chunk timings for elements
+			const offset = slide.timestamp.start;
 			chunk.height = this.resolution.height;
 			chunk.width = Math.round(
 				(this.resolution.height * slide.resolution.width) /
 					slide.resolution.height
 			);
-			chunk.duration = Number(
-				(slide.timestamp.end - slide.timestamp.start).toFixed(2)
-			);
 			chunk.timestamp = slide.timestamp;
-			chunk.filesLocations = [];
-
 			// Add padding from the left side of cursors if the slide
 			// image width is too small for the wanted resolution
-			const paddingX =
+			const padding =
 				chunk.width < this.resolution.width
 					? (this.resolution.width - chunk.width) / 2
 					: 0;
 
-			// Check if there are cursors present
-			if (slide.cursors !== null) {
-				const cursors = slide.cursors;
-				for (let n = 0; n < cursors.length; n++) {
-					const cursor = cursors[n];
-					const cursorX = (
-						chunk.width * cursor.position.posX +
-						paddingX
-					).toFixed(2);
-					const cursorY = (chunk.height * cursor.position.posY).toFixed(2);
-					const start = (cursor.timestamp.start - offset).toFixed(2);
-					const end = (cursor.timestamp.end - offset).toFixed(2);
+			const inputBuilder = [presentation.cursorLocation];
+			// Center slide if it's smaller than the desired resolution
+			const slideDefs =
+				`[0]pad=width=${this.resolution.width}:height=${this.resolution.height}:x=-1:y=-1:color=black,setsar=1,` +
+				`scale=${this.resolution.width}:${this.resolution.height}:force_original_aspect_ratio=1[v0];[v0]`;
 
-					const shouldExport = checkCommandLength();
-					if (shouldExport) {
-						const complexFilterFileName = `${slide.id}_${chunkCounter}.txt`;
-						const complexFilterFileLocation = path.resolve(
-							presentation.dataLocation,
-							complexFilterFileName
+			const slideSplits = commandSplits[slide.id];
+
+			for (let splitCount = 0; splitCount < slideSplits.length; splitCount++) {
+				const slideSplit = slideSplits[splitCount];
+				let complexFilterBuilder = [];
+
+				// Check if there are cursors present
+				if (slide.cursors !== null) {
+					const cursors = slide.cursors.filter((el) => {
+						return (
+							el.timestamp.start >= slideSplit.splitStart &&
+							el.timestamp.end <= slideSplit.splitEnd
 						);
-						const videoChunkLocation = path.resolve(
-							presentation.dataLocation,
-							`${slide.id}_${chunkCounter}.mp4`
-						);
-						const command = [
-							'ffmpeg',
-							'-y',
-							'-loop',
-							'1',
-							'-r',
-							'20',
-							'-i',
-							...inputBuilder
-								.map((el, index, array) => {
-									if (array.length - 1 !== index) {
-										return [el, '-i'];
-									}
+					});
 
-									return [el];
-								})
-								.flat(),
-							'-t',
-							chunk.duration,
-							'-filter_complex_script',
-							complexFilterFileLocation,
-							videoChunkLocation,
-						];
+					for (let n = 0; n < cursors.length; n++) {
+						const cursor = cursors[n];
+						const cursorX = (
+							chunk.width * cursor.position.posX +
+							padding
+						).toFixed(2);
+						const cursorY = (chunk.height * cursor.position.posY).toFixed(2);
+						const start = (cursor.timestamp.start - offset).toFixed(2);
+						const end = (cursor.timestamp.end - offset).toFixed(2);
 
-						chunk.commands.push(command);
-
-						fs.writeFileSync(
-							complexFilterFileLocation,
-							complexFilterBuilder.join('')
+						complexFilterBuilder.push(
+							(n === 0 ? slideDefs : `[v${n}]`) +
+								`[1:v]overlay=${cursorX}:${cursorY}:enable='between(t,${start},${end})'` +
+								(n < cursors.length - 1 ? `[v${n + 1}];\n` : ``)
 						);
 					}
-
+				} else {
+					// Push empty cursor to not break the chain of inputs
 					complexFilterBuilder.push(
-						(itemIndex === 0 ? slideDefs : `[v${itemIndex}]`) +
-							`[1:v]overlay=${cursorX}:${cursorY}:enable='between(t,${start},${end})'` +
-							(itemIndex < cursors.length - 1 ? `[v${itemIndex + 1}];` : ``)
+						`${slideDefs}[1:v]overlay=-20:-20:enable='between(t,0,0)'`
 					);
 				}
-			} else {
-				// Push empty cursor to not break the chain of inputs
-				complexFilterBuilder.push(
-					`${slideDefs}[1:v]overlay=-20:-20:enable='between(t,0,0)'`
+
+				// Check if there are any shapes present
+				if (slide.shapes !== null) {
+					const lastCursor = complexFilterBuilder.length;
+					const shapes = slide.shapes
+						.filter((el) => {
+							// Either find elements that are withing the time range, or find
+							// all that start before the split end
+							return (
+								(el.timestamp.start >= slideSplit.splitStart &&
+									el.timestamp.end <= slideSplit.splitEnd) ||
+								el.timestamp.start < slideSplit.splitEnd
+							);
+						})
+						.map((el) => {
+							// Fix end time to not go over the chunk duration
+							if (el.timestamp.end > slideSplit.splitEnd) {
+								el.timestamp.end = slideSplit.splitEnd;
+							}
+							return el;
+						});
+
+					for (let n = 0; n < shapes.length; n++) {
+						const shape = shapes[n];
+						const start = (shape.timestamp.start - offset).toFixed(2);
+						const end = (shape.timestamp.end - offset).toFixed(2);
+
+						complexFilterBuilder.push(
+							(n === 0
+								? `[v${lastCursor}];[v${lastCursor}]`
+								: `[v${lastCursor + n}]`) +
+								`[${n + 2}:v]overlay=0:0:enable=` +
+								`'between(t,${start},${end})'` +
+								(n < shapes.length - 1 ? `[v${lastCursor + n + 1}];\n` : ``)
+						);
+						inputBuilder.push(shape.location);
+					}
+				}
+
+				const complexFilterFileName = `${slide.id}_${splitCount}.txt`;
+				const complexFilterFileLocation = path.resolve(
+					presentation.dataLocation,
+					complexFilterFileName
+				);
+
+				fs.writeFileSync(
+					complexFilterFileLocation,
+					complexFilterBuilder.join('')
 				);
 			}
+			// const slideImageLocation = path.resolve(
+			// 	presentation.dataLocation,
+			// 	slide.fileName
+			// );
+			// const videoChunkLocation = path.resolve(
+			// 	presentation.dataLocation,
+			// 	`${slide.id}.mp4`
+			// );
+			// chunk.id = slide.id;
+			// chunk.duration = Number(
+			// 	(slide.timestamp.end - slide.timestamp.start).toFixed(2)
+			// );
+			// chunk.fileLocation = videoChunkLocation;
+			// chunk.command =
+			// 	`ffmpeg -y -loop 1 -r 20 -i ${slideImageLocation} ` +
+			// 	`-i ${inputBuilder.join(' -i ')} -t ${chunk.duration} ` +
+			// 	`-filter_complex_script ${complexFilterFileLocation} ` +
+			// 	`${videoChunkLocation}`;
+
+			// this.sequence.push(chunk);
 		}
 	}
 
@@ -163,17 +167,20 @@ class VideoCreator {
 	 * Use data from the sequence array to generate slide video chunks
 	 */
 	renderChunks() {
-		for (let chunk of this.sequence) {
-			if (fs.existsSync(chunk.fileLocation)) {
-				logs(`Skipping ${chunk.id}, video chunk exists`, 'red');
-				continue;
+		for (let imageId of Object.keys(this.splitChunks)) {
+			for (let chunk of this.splitChunks[imageId]) {
+				if (fs.existsSync(chunk.videoChunkLocation)) {
+					logs(`Skipping ${chunk.id}, video chunk exists`, 'red');
+					continue;
+				}
+				logs(`Rendering chunk: ${chunk.id}`, 'cyan');
+				executeCommand(chunk.command);
 			}
-			logs(`Rendering chunk: ${chunk.id}`, 'cyan');
-			executeCommand(chunk.command);
 		}
 
 		logs('Chunks rendering complete', 'magenta');
 	}
+
 	/**
 	 * Combines everything into one large video
 	 * @param {T.PresentationInfo} presentation

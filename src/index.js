@@ -32,8 +32,6 @@ async function main() {
 
 	// DATA_SORTER.createInfoFile(BBB, input);
 	DATA_SORTER.cleanUp(BBB);
-
-	console.log('shit"s done');
 }
 
 main();
