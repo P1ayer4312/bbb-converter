@@ -21,7 +21,7 @@ function splitChunks(dataSorter, presentation) {
 		const slideId = slide.id;
 		commandSplits[slideId] = [];
 
-		const slideImageLocation = path.resolve(
+		let slideBackgroundContentLocation = path.resolve(
 			presentation.dataLocation,
 			slide.fileName
 		);
@@ -40,15 +40,24 @@ function splitChunks(dataSorter, presentation) {
 			let splitRangeFrom = 0;
 			for (let n = 0; n < slide.shapes.length; n++) {
 				const shape = slide.shapes[n];
+
+				if (splitIndex > 0) {
+					slideBackgroundContentLocation = path.resolve(
+						presentation.dataLocation,
+						`${slide.id}_${splitIndex - 1}.mp4`
+					);
+				}
+
 				command = createFFmpegCommand(
-					slideImageLocation,
+					slideBackgroundContentLocation,
 					inputBuilder,
 					{
-						start: splitStart,
-						end: shape.timestamp.start,
+						start: slide.timestamp.start,
+						end: slide.timestamp.end,
 					},
 					complexFilterFileLocation,
-					videoChunkLocation
+					videoChunkLocation,
+					splitIndex === 0
 				);
 
 				if (command.length >= MAX_COMMAND_LENGTH) {
@@ -65,8 +74,6 @@ function splitChunks(dataSorter, presentation) {
 						},
 					});
 
-					splitRangeFrom = n;
-
 					fs.writeFileSync(
 						path.resolve(
 							presentation.dataLocation,
@@ -75,6 +82,7 @@ function splitChunks(dataSorter, presentation) {
 						command
 					);
 
+					splitRangeFrom = n;
 					splitIndex += 1;
 					splitStart = shape.timestamp.start;
 					inputBuilder = [presentation.cursorLocation];
@@ -93,39 +101,52 @@ function splitChunks(dataSorter, presentation) {
 				inputBuilder.push(shape.location);
 			}
 
-			const lastShapes = slide.shapes.at(-1);
+			if (inputBuilder.length > 1) {
+				const lastShapes = slide.shapes.at(-1);
 
-			command = createFFmpegCommand(
-				slideImageLocation,
-				inputBuilder,
-				{
-					start: splitStart,
-					end: lastShapes.timestamp.start,
-				},
-				complexFilterFileLocation,
-				videoChunkLocation
-			);
+				if (splitIndex > 0) {
+					slideBackgroundContentLocation = path.resolve(
+						presentation.dataLocation,
+						`${slide.id}_${splitIndex - 1}.mp4`
+					);
+				}
 
-			commandSplits[slideId].push({
-				id: `${slide.id}_${splitIndex}`,
-				command,
-				index: splitIndex,
-				splitStart,
-				splitEnd: lastShapes.timestamp.end - splitStart,
-				videoChunkLocation,
-				splitRange: {
-					from: splitRangeFrom,
-					count: dataSorter.slides.length - splitRangeFrom,
-				},
-			});
+				command = createFFmpegCommand(
+					slideBackgroundContentLocation,
+					inputBuilder,
+					{
+						start: slide.timestamp.start,
+						end: slide.timestamp.end,
+					},
+					complexFilterFileLocation,
+					videoChunkLocation,
+					splitIndex === 0
+				);
 
-			fs.writeFileSync(
-				path.resolve(
-					presentation.dataLocation,
-					`${slide.id}_${splitIndex}_cmd.txt`
-				),
-				command
-			);
+				const lastCmdSplit = commandSplits[slideId].at(-1);
+				commandSplits[slideId].push({
+					id: `${slide.id}_${splitIndex}`,
+					command,
+					index: splitIndex,
+					splitStart,
+					splitEnd: lastShapes.timestamp.end - splitStart,
+					videoChunkLocation,
+					splitRange: {
+						from: lastCmdSplit
+							? lastCmdSplit.splitRange.from + lastCmdSplit.splitRange.count
+							: 0,
+						count: inputBuilder.length - 1,
+					},
+				});
+
+				fs.writeFileSync(
+					path.resolve(
+						presentation.dataLocation,
+						`${slide.id}_${splitIndex}_cmd.txt`
+					),
+					command
+				);
+			}
 		}
 	}
 

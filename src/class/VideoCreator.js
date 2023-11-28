@@ -95,15 +95,10 @@ class VideoCreator {
 				// Check if there are any shapes present
 				if (slide.shapes !== null) {
 					const lastCursor = complexFilterBuilder.length;
-					const shapes = [...slide.shapes]
-						.splice(slideSplit.splitRange.from, slideSplit.splitRange.count)
-						.map((el) => {
-							// Fix end time to not go over the chunk duration
-							if (el.timestamp.end > slideSplit.splitEnd) {
-								el.timestamp.end = slideSplit.splitEnd;
-							}
-							return el;
-						});
+					const shapes = [...slide.shapes].splice(
+						slideSplit.splitRange.from,
+						slideSplit.splitRange.count
+					);
 
 					for (let n = 0; n < shapes.length; n++) {
 						const shape = shapes[n];
