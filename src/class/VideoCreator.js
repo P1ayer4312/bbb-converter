@@ -64,8 +64,9 @@ class VideoCreator {
 				if (slide.cursors !== null) {
 					const cursors = slide.cursors.filter((el) => {
 						return (
-							el.timestamp.start >= slideSplit.splitStart &&
-							el.timestamp.end <= slideSplit.splitEnd
+							(el.timestamp.start >= slideSplit.splitStart &&
+								el.timestamp.end <= slideSplit.splitEnd) ||
+							el.timestamp.start >= slideSplit.splitStart
 						);
 					});
 
