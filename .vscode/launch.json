@@ -10,6 +10,14 @@
 			"name": "Run",
 			"skipFiles": ["<node_internals>/**"],
 			"program": "${workspaceFolder}\\src\\index.js"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Run Local",
+			"skipFiles": ["<node_internals>/**"],
+			"program": "${workspaceFolder}\\src\\index.js",
+			"args": ["--local"]
 		}
 	]
 }

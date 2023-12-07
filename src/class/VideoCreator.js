@@ -6,6 +6,7 @@ const path = require('node:path');
 const executeCommand = require('../function/executeCommand');
 const config = require('../../config.json');
 const splitChunks = require('../function/splitChunks');
+const { filterPerTimestamp } = require('../function/ffmpegHelper');
 
 /**
  * Wrapper class for creating videos
@@ -34,7 +35,8 @@ class VideoCreator {
 			/** @type {T.Chunk} */
 			const chunk = {};
 			// 'offset' is used for correcting chunk timings for elements
-			const offset = slide.timestamp.start;
+			// const offset = slide.timestamp.start;
+			let offset = slide.timestamp.start;
 			chunk.height = this.resolution.height;
 			chunk.width = Math.round(
 				(this.resolution.height * slide.resolution.width) /
@@ -57,10 +59,24 @@ class VideoCreator {
 			const slideSplits = commandSplits[slide.id];
 
 			for (let splitCount = 0; splitCount < slideSplits.length; splitCount++) {
+				const complexFilterFileName = `${slide.id}_${splitCount}.txt`;
+				const complexFilterFileLocation = path.resolve(
+					presentation.dataLocation,
+					complexFilterFileName
+				);
+
+				// if (fs.existsSync(complexFilterFileLocation)) {
+				// 	continue;
+				// }
+
 				const slideSplit = slideSplits[splitCount];
 				let complexFilterBuilder = [];
+				// offset = slideSplit.splitStart;
 
 				// Check if there are cursors present
+				// We check for the splitCount because we already have
+				// the cursor rendered in the first iteration, there's no
+				// point to render the cursor again
 				if (slide.cursors !== null) {
 					const cursors = slide.cursors.filter((el) => {
 						return (
@@ -96,13 +112,25 @@ class VideoCreator {
 				// Check if there are any shapes present
 				if (slide.shapes !== null) {
 					const lastCursor = complexFilterBuilder.length;
-					const shapes = [...slide.shapes].splice(
-						slideSplit.splitRange.from,
-						slideSplit.splitRange.count
-					);
+					// TODO: Remove splitRange if it's not used
+					// const shapes = [...slide.shapes].splice(
+					// 	slideSplit.splitRange.from,
+					// 	slideSplit.splitRange.count
+					// );
 
+					// Create copy before patching the timings for each
+					// filtered item from "filterPerTimestamp"
+					const shapes = [...slide.shapes].filter((item) => {
+						return filterPerTimestamp(
+							item,
+							slideSplit.splitStart,
+							slideSplit.splitEnd
+						);
+					});
+					let stop = 1;
 					for (let n = 0; n < shapes.length; n++) {
 						const shape = shapes[n];
+						const offset = shape.timestamp.start;
 						const start = (shape.timestamp.start - offset).toFixed(2);
 						const end = (shape.timestamp.end - offset).toFixed(2);
 
@@ -118,37 +146,12 @@ class VideoCreator {
 					}
 				}
 
-				const complexFilterFileName = `${slide.id}_${splitCount}.txt`;
-				const complexFilterFileLocation = path.resolve(
-					presentation.dataLocation,
-					complexFilterFileName
-				);
-
 				fs.writeFileSync(
 					complexFilterFileLocation,
-					complexFilterBuilder.join('')
+					`START: ${slideSplit.splitStart} - END: ${slideSplit.splitEnd}\n` +
+						complexFilterBuilder.join('')
 				);
 			}
-			// const slideImageLocation = path.resolve(
-			// 	presentation.dataLocation,
-			// 	slide.fileName
-			// );
-			// const videoChunkLocation = path.resolve(
-			// 	presentation.dataLocation,
-			// 	`${slide.id}.mp4`
-			// );
-			// chunk.id = slide.id;
-			// chunk.duration = Number(
-			// 	(slide.timestamp.end - slide.timestamp.start).toFixed(2)
-			// );
-			// chunk.fileLocation = videoChunkLocation;
-			// chunk.command =
-			// 	`ffmpeg -y -loop 1 -r 20 -i ${slideImageLocation} ` +
-			// 	`-i ${inputBuilder.join(' -i ')} -t ${chunk.duration} ` +
-			// 	`-filter_complex_script ${complexFilterFileLocation} ` +
-			// 	`${videoChunkLocation}`;
-
-			// this.sequence.push(chunk);
 		}
 	}
 
@@ -156,10 +159,28 @@ class VideoCreator {
 	 * Use data from the sequence array to generate slide video chunks
 	 */
 	renderChunks() {
-		for (let imageId of Object.keys(this.splitChunks)) {
+		for (let imageId of Object.keys(this.splitChunks).slice(0, 1)) {
+			// In case the program fails and restarts, check which chunk index is
+			// last and skip the previous ones, since there are no longer needed.
+			// If the final chunk index is not rendered, ignore this check
+			const lastChunk = this.splitChunks[imageId].at(-1);
+			const lastChunkIndex = lastChunk
+				? Number(lastChunk.id.charAt(lastChunk.id.length - 1))
+				: 0;
+			const isLastChunkIndexPresent = lastChunk
+				? fs.existsSync(lastChunk.videoChunkLocation)
+				: false;
+
 			for (let chunk of this.splitChunks[imageId]) {
-				if (fs.existsSync(chunk.videoChunkLocation)) {
-					logs(`Skipping ${chunk.id}, video chunk exists`, 'red');
+				const currentChunkIndex = Number(chunk.id.charAt(chunk.id.length));
+				if (
+					fs.existsSync(chunk.videoChunkLocation) ||
+					(isLastChunkIndexPresent && currentChunkIndex < lastChunkIndex)
+				) {
+					logs(
+						`Skipping ${chunk.id}, video chunk exists or is not needed`,
+						'red'
+					);
 					continue;
 				}
 				logs(`Rendering chunk: ${chunk.id}`, 'cyan');

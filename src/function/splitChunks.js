@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 const T = require('../types/typedefs');
 const path = require('node:path');
 const { createFFmpegCommand } = require('./ffmpegHelper');
@@ -41,13 +42,6 @@ function splitChunks(dataSorter, presentation) {
 			for (let n = 0; n < slide.shapes.length; n++) {
 				const shape = slide.shapes[n];
 
-				if (splitIndex > 0) {
-					slideBackgroundContentLocation = path.resolve(
-						presentation.dataLocation,
-						`${slide.id}_${splitIndex - 1}.mp4`
-					);
-				}
-
 				command = createFFmpegCommand(
 					slideBackgroundContentLocation,
 					inputBuilder,
@@ -56,8 +50,7 @@ function splitChunks(dataSorter, presentation) {
 						end: slide.timestamp.end,
 					},
 					complexFilterFileLocation,
-					videoChunkLocation,
-					splitIndex === 0
+					videoChunkLocation
 				);
 
 				if (command.length >= MAX_COMMAND_LENGTH) {
@@ -74,13 +67,14 @@ function splitChunks(dataSorter, presentation) {
 						},
 					});
 
-					fs.writeFileSync(
-						path.resolve(
-							presentation.dataLocation,
-							`${slide.id}_${splitIndex}_cmd.txt`
-						),
-						command
+					const presentationCmdLocation = path.resolve(
+						presentation.dataLocation,
+						`${slide.id}_${splitIndex}_cmd.txt`
 					);
+
+					// if (!fs.existsSync(presentationCmdLocation)) {
+					fs.writeFileSync(presentationCmdLocation, command);
+					// }
 
 					splitRangeFrom = n;
 					splitIndex += 1;
@@ -104,13 +98,6 @@ function splitChunks(dataSorter, presentation) {
 			if (inputBuilder.length > 1) {
 				const lastShapes = slide.shapes.at(-1);
 
-				if (splitIndex > 0) {
-					slideBackgroundContentLocation = path.resolve(
-						presentation.dataLocation,
-						`${slide.id}_${splitIndex - 1}.mp4`
-					);
-				}
-
 				command = createFFmpegCommand(
 					slideBackgroundContentLocation,
 					inputBuilder,
@@ -119,8 +106,7 @@ function splitChunks(dataSorter, presentation) {
 						end: slide.timestamp.end,
 					},
 					complexFilterFileLocation,
-					videoChunkLocation,
-					splitIndex === 0
+					videoChunkLocation
 				);
 
 				const lastCmdSplit = commandSplits[slideId].at(-1);
@@ -129,7 +115,7 @@ function splitChunks(dataSorter, presentation) {
 					command,
 					index: splitIndex,
 					splitStart,
-					splitEnd: lastShapes.timestamp.end - splitStart,
+					splitEnd: lastShapes.timestamp.end,
 					videoChunkLocation,
 					splitRange: {
 						from: lastCmdSplit
@@ -139,13 +125,14 @@ function splitChunks(dataSorter, presentation) {
 					},
 				});
 
-				fs.writeFileSync(
-					path.resolve(
-						presentation.dataLocation,
-						`${slide.id}_${splitIndex}_cmd.txt`
-					),
-					command
+				const presentationCmdLocation = path.resolve(
+					presentation.dataLocation,
+					`${slide.id}_${splitIndex}_cmd.txt`
 				);
+
+				// if (!fs.existsSync(presentationCmdLocation)) {
+				fs.writeFileSync(presentationCmdLocation, command);
+				// }
 			}
 		}
 	}
