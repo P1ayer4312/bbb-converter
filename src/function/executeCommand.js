@@ -1,12 +1,14 @@
-const { execSync } = require('node:child_process');
+// eslint-disable-next-line no-unused-vars
+const T = require('../types/typedefs');
+const { spawnSync } = require('node:child_process');
 const config = require('../../config.json');
 
 /**
  * Execute shell command
- * @param {string} command
+ * @param {T.Command} value
  */
-function executeCommand(command) {
-	execSync(command, {
+function executeCommand(value) {
+	spawnSync(value.command, value.args, {
 		stdio: config.ffmpegStatus ? 'inherit' : 'ignore',
 	});
 }

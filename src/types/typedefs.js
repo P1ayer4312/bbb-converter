@@ -52,6 +52,12 @@
  */
 
 /**
+ * @typedef {object} Command
+ * @prop {string} command
+ * @prop {string[]} args
+ */
+
+/**
  * Used for storing information about data for a certain slide
  * when creating a sequence
  * @typedef {object} Chunk
@@ -59,11 +65,9 @@
  * @prop {number} width
  * @prop {number} height
  * @prop {Timestamp} timestamp
- * @prop {string} command FFMPEG command // TODO: Might need to be removed
- * @prop {string[][]} commands
+ * @prop {Command} command FFMPEG command
  * @prop {number} duration Chunk duration in seconds
- * @prop {string} fileLocation  // TODO: Might need to be removed
- * @prop {string[]} filesLocations
+ * @prop {string} fileLocation
  */
 
 /**

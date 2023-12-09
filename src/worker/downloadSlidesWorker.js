@@ -1,4 +1,4 @@
-const { workerData, parentPort } = require('node:worker_threads');
+const { workerData } = require('node:worker_threads');
 const downloadSlide = require('../function/downloadSlide');
 const logs = require('../function/logs');
 // eslint-disable-next-line no-unused-vars

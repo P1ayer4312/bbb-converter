@@ -21,17 +21,16 @@ async function main() {
 	// 	DATA_SORTER.downloadAudioWorker(BBB),
 	// 	DATA_SORTER.downloadSharescreenWorker(BBB, videoResolution),
 	// 	DATA_SORTER.downloadSlidesWorker(BBB.dataLocation, videoResolution),
-	// 	// DATA_SORTER.exportShapesToPngWorker(BBB, videoResolution),
 	// 	DATA_SORTER.exportShapesToPngProcess(BBB, videoResolution),
 	// ]);
 
 	const VIDEO_CREATOR = new VideoCreator(videoResolution);
 	VIDEO_CREATOR.createSequence(DATA_SORTER, BBB);
-	// VIDEO_CREATOR.renderChunks();
+	VIDEO_CREATOR.renderChunks();
 	// VIDEO_CREATOR.finalRender(BBB);
 
 	// DATA_SORTER.createInfoFile(BBB, input);
-	DATA_SORTER.cleanUp(BBB);
+	// DATA_SORTER.cleanUp(BBB);
 }
 
 main();

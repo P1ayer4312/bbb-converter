@@ -20,7 +20,17 @@ async function downloadAudio(presentation) {
 		}
 
 		parentPort.postMessage('Downloading audio');
-		const ffmpegCommand = `ffmpeg -y -i ${presentation.videoFilesUrls.webcams} -vn ${fileLocation}`;
+		/** @type {T.Command} */
+		const ffmpegCommand = {
+			command: 'ffmpeg',
+			args: [
+				'-y',
+				'-i',
+				presentation.videoFilesUrls.webcams,
+				'-vn',
+				fileLocation,
+			],
+		};
 
 		executeCommand(ffmpegCommand);
 		resolve();
