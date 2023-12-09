@@ -26,10 +26,10 @@ class VideoCreator {
 	 * @param {T.PresentationInfo} presentation
 	 */
 	createSequence(dataSorter, presentation) {
-		console.log(1);
 		for (let slide of dataSorter.slides) {
 			/** @type {T.Chunk} */
 			const chunk = {};
+			const relativePathStartPoint = presentation.shapesLocation;
 			// 'offset' is used for correcting chunk timings for elements
 			const offset = slide.timestamp.start;
 			chunk.height = this.resolution.height;
@@ -45,7 +45,11 @@ class VideoCreator {
 					? (this.resolution.width - chunk.width) / 2
 					: 0;
 			const complexFilterBuilder = [];
-			const inputBuilder = ['-i', presentation.cursorLocation];
+			const inputBuilder = [
+				'-i',
+				path.relative(relativePathStartPoint, presentation.cursorLocation),
+			];
+
 			// Center slide if it's smaller than the desired resolution
 			const slideDefs =
 				`[0]pad=width=${this.resolution.width}:height=${this.resolution.height}:x=-1:y=-1:color=black,setsar=1,` +
@@ -92,13 +96,19 @@ class VideoCreator {
 							`'between(t,${start},${end})'` +
 							(n < slide.shapes.length - 1 ? `[v${lastCursor + n + 1}];` : ``)
 					);
-					inputBuilder.push('-i', shape.location);
+					inputBuilder.push(
+						'-i',
+						path.relative(relativePathStartPoint, shape.location)
+					);
 				}
 			}
-
 			const complexFilterFileLocation = path.resolve(
 				presentation.dataLocation,
 				`${slide.id}.txt`
+			);
+			const complexFilterRelativeFileLocation = path.relative(
+				relativePathStartPoint,
+				complexFilterFileLocation
 			);
 
 			const commandJsonFileLocation = path.resolve(
@@ -106,14 +116,16 @@ class VideoCreator {
 				`${slide.id}_cmd.json`
 			);
 
-			const slideImageLocation = path.resolve(
-				presentation.dataLocation,
-				slide.fileName
+			const slideImageLocation = path.relative(
+				relativePathStartPoint,
+				path.resolve(presentation.dataLocation, slide.fileName)
 			);
-			const videoChunkLocation = path.resolve(
-				presentation.dataLocation,
-				`${slide.id}.mp4`
+
+			const videoChunkLocation = path.relative(
+				relativePathStartPoint,
+				path.resolve(presentation.dataLocation, `${slide.id}.mp4`)
 			);
+
 			chunk.id = slide.id;
 			chunk.duration = Number(
 				(slide.timestamp.end - slide.timestamp.start).toFixed(2)
@@ -122,6 +134,7 @@ class VideoCreator {
 
 			chunk.command = {
 				command: 'ffmpeg',
+				cwd: relativePathStartPoint,
 				args: [
 					'-y',
 					'-loop',
@@ -134,7 +147,7 @@ class VideoCreator {
 					'-t',
 					chunk.duration,
 					'-filter_complex_script',
-					complexFilterFileLocation,
+					complexFilterRelativeFileLocation,
 					videoChunkLocation,
 				],
 			};

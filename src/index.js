@@ -30,7 +30,7 @@ async function main() {
 	// VIDEO_CREATOR.finalRender(BBB);
 
 	// DATA_SORTER.createInfoFile(BBB, input);
-	// DATA_SORTER.cleanUp(BBB);
+	DATA_SORTER.cleanUp(BBB);
 }
 
 main();

@@ -10,6 +10,7 @@ const config = require('../../config.json');
 function executeCommand(value) {
 	spawnSync(value.command, value.args, {
 		stdio: config.ffmpegStatus ? 'inherit' : 'ignore',
+		cwd: value.cwd ?? undefined,
 	});
 }
 

@@ -54,6 +54,7 @@
 /**
  * @typedef {object} Command
  * @prop {string} command
+ * @prop {string} cwd
  * @prop {string[]} args
  */
 
