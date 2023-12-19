@@ -12,6 +12,8 @@ const createShapeExportProcesses = require('../function/createShapeExportProcess
  * Wrapper class for managing and sorting slides' data
  */
 class DataSorter {
+	/* =========================================================================== */
+
 	constructor() {
 		logs('Creating "DataSorter" instance', 'yellow');
 		/**@type {T.Slide[] | null} */
@@ -19,6 +21,9 @@ class DataSorter {
 		/** @type {T.SharescreenChunks[] | []} */
 		this.shareScreenChunks = [];
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Map slides values from the shapes xml file and store them
 	 * @param {T.PresentationInfo} presentation
@@ -27,39 +32,59 @@ class DataSorter {
 		const shapesXml = presentation.xmlFiles.slidesXml;
 		const slides = [];
 		logs('Mapping slides data', 'cyan');
-		for (let image of shapesXml.svg.image) {
-			// Skip placeholder images used where screen sharing takes place
-			const imageHref = image['xlink:href'];
-			if (imageHref == 'presentation/deskshare.png') {
-				continue;
-			}
-			/**@type {T.Slide} */
-			const slideInfo = {
-				id: image.id,
-				timestamp: {
-					start: parseFloat(image.in),
-					end: parseFloat(image.out),
-				},
-				resolution: {
-					width: parseInt(image.width),
-					height: parseInt(image.height),
-				},
-				url: `${presentation.filesUrl}/${imageHref}`,
-				fileName: imageHref.substring(imageHref.lastIndexOf('/') + 1),
-				shapes: null,
-				cursors: null,
-			};
+		if (Array.isArray(shapesXml.svg.image)) {
+			for (let image of shapesXml.svg.image) {
+				// Skip placeholder images used where screen sharing takes place
+				const imageHref = image['xlink:href'];
+				if (imageHref == 'presentation/deskshare.png') {
+					continue;
+				}
+				/**@type {T.Slide} */
+				const slideInfo = {
+					id: image.id,
+					timestamp: {
+						start: parseFloat(image.in),
+						end: parseFloat(image.out),
+					},
+					resolution: {
+						width: parseInt(image.width),
+						height: parseInt(image.height),
+					},
+					url: `${presentation.filesUrl}/${imageHref}`,
+					fileName: imageHref.substring(imageHref.lastIndexOf('/') + 1),
+					shapes: null,
+					cursors: null,
+				};
 
-			// Check if there are drawn shapes present
-			if (shapesXml.svg.g) {
-				const shapes = Array.isArray(shapesXml.svg.g)
-					? shapesXml.svg.g.find((el) => el.image == image.id)
-					: shapesXml.svg.g;
+				// Check if there are drawn shapes present
+				if (shapesXml.svg.g) {
+					const shapes = Array.isArray(shapesXml.svg.g)
+						? shapesXml.svg.g.find((el) => el.image == image.id)
+						: shapesXml.svg.g;
 
-				if (shapes) {
-					const shapesInfo = [];
-					if (Array.isArray(shapes.g)) {
-						for (let shape of shapes.g) {
+					if (shapes) {
+						const shapesInfo = [];
+						if (Array.isArray(shapes.g)) {
+							for (let shape of shapes.g) {
+								const temp = {
+									id: shape.id,
+									timestamp: {
+										start: parseFloat(shape.timestamp),
+										end:
+											shape.undo == '-1'
+												? slideInfo.timestamp.end
+												: parseFloat(shape.undo),
+									},
+									location: path.resolve(
+										presentation.shapesLocation,
+										`${shape.id}.png`
+									),
+								};
+
+								shapesInfo.push(temp);
+							}
+						} else {
+							const shape = shapes.g;
 							const temp = {
 								id: shape.id,
 								timestamp: {
@@ -77,35 +102,19 @@ class DataSorter {
 
 							shapesInfo.push(temp);
 						}
-					} else {
-						const shape = shapes.g;
-						const temp = {
-							id: shape.id,
-							timestamp: {
-								start: parseFloat(shape.timestamp),
-								end:
-									shape.undo == '-1'
-										? slideInfo.timestamp.end
-										: parseFloat(shape.undo),
-							},
-							location: path.resolve(
-								presentation.shapesLocation,
-								`${shape.id}.png`
-							),
-						};
 
-						shapesInfo.push(temp);
+						slideInfo.shapes = shapesInfo;
 					}
-
-					slideInfo.shapes = shapesInfo;
 				}
-			}
 
-			slides.push(slideInfo);
+				slides.push(slideInfo);
+			}
 		}
 
 		this.slides = slides;
 	}
+
+	/* =========================================================================== */
 
 	/**
 	 * Groups cursors by slide start and end
@@ -144,7 +153,15 @@ class DataSorter {
 
 			slide.cursors = cursors.length > 0 ? cursors : null;
 		}
+
+		logs(
+			'Downloading sharescreen, audio and drawing interactions',
+			'gray',
+			true
+		);
 	}
+
+	/* =========================================================================== */
 
 	/**
 	 * Extract and download audio from webcam
@@ -168,6 +185,8 @@ class DataSorter {
 		});
 	}
 
+	/* =========================================================================== */
+
 	/**
 	 * Download presentation slides as Worker
 	 * @param {string} downloadFolder
@@ -185,41 +204,7 @@ class DataSorter {
 		);
 	}
 
-	/**
-	 * Export drawn shapes from svg to png format as Worker
-	 * @param {T.PresentationInfo} presentation
-	 * @param {T.Resolution} resolution
-	 */
-	exportShapesToPngWorker(presentation, resolution) {
-		if (config.numShapesExportWorkers === 1) {
-			// TODO: Remove
-			return createWorker(
-				'./src/worker/exportShapesToPngWorker.js',
-				{
-					presentation,
-					resolution,
-					slides: this.slides,
-					sliceIndex: -1,
-				},
-				'Drawing shapes complete'
-			);
-		}
-
-		return Promise.all(
-			Array.from(Array(config.numShapesExportWorkers).keys()).map((index) => {
-				return createWorker(
-					'./src/worker/exportShapesToPngWorker.js',
-					{
-						presentation,
-						resolution,
-						slides: this.slides,
-						sliceIndex: index,
-					},
-					'Drawing shapes complete'
-				);
-			})
-		);
-	}
+	/* =========================================================================== */
 
 	/**
 	 * Export drawn shapes from svg to png format as separate Node process
@@ -227,13 +212,20 @@ class DataSorter {
 	 * @param {T.Resolution} resolution
 	 */
 	exportShapesToPngProcess(presentation, resolution) {
-		return createShapeExportProcesses({
-			filePath: path.resolve('src', 'process', 'exportShapesToPngProcess.js'),
-			resolution,
-			slides: this.slides,
-			presentation,
-		});
+		if (this.slides.length > 0) {
+			return createShapeExportProcesses({
+				filePath: path.resolve('src', 'process', 'exportShapesToPngProcess.js'),
+				resolution,
+				slides: this.slides,
+				presentation,
+			});
+		} else {
+			logs('No slides found', 'magenta');
+			return Promise.resolve();
+		}
 	}
+
+	/* =========================================================================== */
 
 	/**
 	 * Extract and download audio from webcam as Worker
@@ -249,6 +241,8 @@ class DataSorter {
 			'Audio download complete'
 		);
 	}
+
+	/* =========================================================================== */
 
 	/**
 	 * Download sharescreen parts as Worker
@@ -268,6 +262,8 @@ class DataSorter {
 			}
 		);
 	}
+
+	/* =========================================================================== */
 
 	/**
 	 * Create an info file with the presentation name, url and
@@ -305,14 +301,18 @@ class DataSorter {
 		const infoFileTemplate =
 			`${presentation.getFullName()}\n` +
 			`${presentationLink}\n\n` +
-			`Timestamps:\n` +
-			`${timestamps.join('\n')}`;
+			`Conversion time: ${presentation.getConversionDuration()}` +
+			(timestamps.length > 0
+				? `\n\nTimestamps:\n` + `${timestamps.join('\n')}`
+				: '');
 
 		fs.writeFileSync(
 			path.resolve(presentation.folderLocation, `presentation_info.txt`),
 			infoFileTemplate
 		);
 	}
+
+	/* =========================================================================== */
 
 	/**
 	 * Remove unused files after the final video is exported
@@ -325,18 +325,10 @@ class DataSorter {
 			fs.rmSync(presentation.shapesLocation, { recursive: true, force: true });
 		}
 
-		const fileLocation = path.resolve(
-			presentation.folderLocation,
-			`${presentation.outputFileName}.mp4`
-		);
-
-		logs(
-			`Done! Elapsed time: ${presentation.getConversionDuration()}`,
-			'green'
-		);
-		logs('The presentation file can be found at:', 'green');
-		logs(`"${fileLocation}"`, 'green');
+		logs(`Done!`, 'green');
 	}
+
+	/* =========================================================================== */
 }
 
 module.exports = DataSorter;

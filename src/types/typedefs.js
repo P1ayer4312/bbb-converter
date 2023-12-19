@@ -126,4 +126,8 @@
  * @typedef {Object.<string, ChunkSplitDetails[]>} ChunkSplits
  */
 
+/**
+ * @typedef {Object.<string, string[]>} UrlFiles
+ */
+
 module.exports.unused = {};

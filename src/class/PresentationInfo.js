@@ -1,33 +1,50 @@
 const path = require('node:path');
 const fs = require('node:fs');
+const { performance } = require('node:perf_hooks');
 const cheerio = require('cheerio');
 const fetchXMLfile = require('../function/fetchXMLfile');
 const logs = require('../function/logs');
 // eslint-disable-next-line no-unused-vars
 const T = require('../types/typedefs');
+const Helper = require('./Helper');
 
 /**
  * Wrapper class used for holding information about
  * the presentation and its files
  */
 class PresentationInfo {
-	/** @param {string} url */
-	constructor(url) {
+	/* =========================================================================== */
+
+	/**
+	 * @param {string} url
+	 * @param {string} inputFileName
+	 */
+	constructor(url, inputFileName) {
 		logs('Creating "PresentationInfo" instance', 'yellow');
 		/** @type {boolean} */
 		this.isLocalDevEnv = process.argv.includes('--local');
 
 		const inputUrl = new URL(url);
-		const presentationId = inputUrl.pathname.substring(
+		let presentationId = inputUrl.pathname.substring(
 			inputUrl.pathname.lastIndexOf('/') + 1
 		);
-		const folderLocation = path.resolve('presentations', `p_${presentationId}`);
+
+		if (presentationId == 'playback.html') {
+			presentationId = inputUrl.searchParams.get('meetingId');
+		}
+
+		const folderLocation = path.resolve(
+			'presentations',
+			inputFileName,
+			`p_${presentationId}`
+		);
 		const originalFilesUrl = `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
 		const filesUrl = this.isLocalDevEnv
 			? 'http://localhost:3000'
 			: originalFilesUrl;
 
-		this.startTime = new Date();
+		this.startTime = performance.now();
+		this.courseFileName = inputFileName;
 		this.url = url;
 		this.filesUrl = filesUrl;
 		this.originalFilesUrl = originalFilesUrl;
@@ -57,26 +74,33 @@ class PresentationInfo {
 		this.xmlFiles = null;
 		this.outputFileName = 'presentation_export';
 	}
+
+	/* =========================================================================== */
+
+	/**
+	 * Get combined full presentation and course name
+	 */
 	getFullName() {
 		return `${this.title} - ${this.courseName}`;
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Used for setting up the folders used in the process of conversion
 	 */
 	createFolders() {
-		// Check if needed folders exist and create them
-		const checkAndCreate = (folder) => {
-			if (!fs.existsSync(folder)) {
-				logs(`Creating folder "${folder}"`, 'cyan');
-				fs.mkdirSync(folder);
-			}
-		};
-
-		checkAndCreate(path.resolve('presentations'));
-		checkAndCreate(this.folderLocation);
-		checkAndCreate(this.dataLocation);
-		checkAndCreate(this.shapesLocation);
+		Helper.checkAndCreateFolder(path.resolve('presentations'));
+		Helper.checkAndCreateFolder(
+			path.resolve('presentations', this.courseFileName)
+		);
+		Helper.checkAndCreateFolder(this.folderLocation);
+		Helper.checkAndCreateFolder(this.dataLocation);
+		Helper.checkAndCreateFolder(this.shapesLocation);
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Clean up unnecessary files and folders when done
 	 */
@@ -84,6 +108,9 @@ class PresentationInfo {
 		fs.rmdirSync(this.dataLocation);
 		fs.rmdirSync(this.shapesLocation);
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Convert course name and presentation title and store them
 	 */
@@ -111,6 +138,9 @@ class PresentationInfo {
 			slides.out = this.duration;
 		}
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Fetch current xml files and store them inside the object
 	 */
@@ -123,20 +153,17 @@ class PresentationInfo {
 
 		this.xmlFiles = parsedXmlFiles;
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Returns elapsed time for the presentation to be converted
 	 */
 	getConversionDuration() {
-		const currentTime = new Date();
-		const hours = Math.abs(currentTime.getHours() - this.startTime.getHours());
-		const minutes = Math.abs(
-			currentTime.getMinutes() - this.startTime.getMinutes()
-		);
-		const seconds = Math.abs(
-			currentTime.getSeconds() - this.startTime.getSeconds()
-		);
-		return `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+		return Helper.formatElapsedTime(this.startTime, performance.now());
 	}
+
+	/* =========================================================================== */
 }
 
 module.exports = PresentationInfo;

@@ -39,11 +39,22 @@ async function patchSvg(svg, presentation) {
 		// Fix font color
 		style.push(`fill:${color}`);
 
+		/** @type {string} */
+		let textValue = svg.switch.foreignObject.p['#text'];
+		if (textValue.includes('[[br/]]')) {
+			// Fix text line breaks
+			const xPos = svg.switch.foreignObject.x;
+			textValue = textValue
+				.split('[[br/]]')
+				.map((el) => `<tspan x="${xPos}" dy="1.1em">${el}</tspan>`)
+				.join('');
+		}
+
 		const text = {
 			x: svg.switch.foreignObject.x,
 			y: yPos,
 			style: style.join(';'),
-			textValue: svg.switch.foreignObject.p['#text'],
+			textValue,
 		};
 
 		delete svg.switch.foreignObject.p['#text'];

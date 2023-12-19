@@ -28,7 +28,7 @@
 		"canvas": "^2.11.2",
 		"chalk": "^4.1.2",
 		"cheerio": "^1.0.0-rc.12",
-		"fast-xml-parser": "^4.2.7",
+		"fast-xml-parser": "^4.3.2",
 		"jimp": "^0.22.10",
 		"serve": "^14.2.1"
 	}

@@ -10,7 +10,6 @@ const logs = require('./logs');
  * Fetch XML file and return JS object
  * @param {string} url
  * @param {boolean} rawXMLformat
- * @returns
  */
 function fetchXMLfile(url, rawXMLformat) {
 	logs(`Fetching ${url}`, 'cyan');
@@ -21,7 +20,9 @@ function fetchXMLfile(url, rawXMLformat) {
 				return res.data;
 			}
 
-			return xmlParser.parse(res.data);
+			// We have to replace the <br/> tag here with a placeholder because
+			// fast-xml-parser is stupid and causes problems
+			return xmlParser.parse(res.data.replace(/<br\s*\/?>/g, '[[br/]]'));
 		})
 		.catch(() => {
 			throw new Error('Failed ' + url);

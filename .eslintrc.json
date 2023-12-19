@@ -8,7 +8,9 @@
 	"parserOptions": {
 		"ecmaVersion": "latest"
 	},
-	"rules": {},
+	"rules": {
+		"no-console": "warn"
+	},
 	"globals": {
 		"process": true
 	}

@@ -1,3 +1,5 @@
 node_modules
 presentations
 **/devDummyData
+links/**
+!links/example.txt

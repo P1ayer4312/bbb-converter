@@ -10,6 +10,8 @@ const config = require('../../config.json');
  * Wrapper class for creating videos
  */
 class VideoCreator {
+	/* =========================================================================== */
+
 	/** @param {T.Resolution} resolution */
 	constructor(resolution) {
 		logs('Creating "VideoCreator" instance', 'yellow');
@@ -20,6 +22,8 @@ class VideoCreator {
 		this.splitChunks = null;
 	}
 
+	/* =========================================================================== */
+
 	/**
 	 * Generates complex filter files for ffmpeg
 	 * @param {T.DataSorter} dataSorter
@@ -27,6 +31,16 @@ class VideoCreator {
 	 */
 	createSequence(dataSorter, presentation) {
 		for (let slide of dataSorter.slides) {
+			const videoChunkLocation = path.resolve(
+				presentation.dataLocation,
+				`${slide.id}.mp4`
+			);
+
+			if (fs.existsSync(videoChunkLocation)) {
+				logs(`Skipping ${slide.id}, video chunk exists`, 'red');
+				continue;
+			}
+
 			/** @type {T.Chunk} */
 			const chunk = {};
 			const relativePathStartPoint = presentation.shapesLocation;
@@ -121,15 +135,17 @@ class VideoCreator {
 				path.resolve(presentation.dataLocation, slide.fileName)
 			);
 
-			const videoChunkLocation = path.relative(
+			const videoChunkRelativeLocation = path.relative(
 				relativePathStartPoint,
-				path.resolve(presentation.dataLocation, `${slide.id}.mp4`)
+				videoChunkLocation
 			);
 
 			chunk.id = slide.id;
-			chunk.duration = Number(
+			const duration = Number(
 				(slide.timestamp.end - slide.timestamp.start).toFixed(2)
 			);
+			// "patch" broken chunks so that they won't break the final video
+			chunk.duration = duration < 0 ? 0 : duration;
 			chunk.fileLocation = videoChunkLocation;
 
 			chunk.command = {
@@ -148,7 +164,8 @@ class VideoCreator {
 					chunk.duration,
 					'-filter_complex_script',
 					complexFilterRelativeFileLocation,
-					videoChunkLocation,
+					'-an',
+					videoChunkRelativeLocation,
 				],
 			};
 
@@ -163,6 +180,8 @@ class VideoCreator {
 		}
 	}
 
+	/* =========================================================================== */
+
 	renderChunks() {
 		for (let chunk of this.sequence) {
 			if (fs.existsSync(chunk.fileLocation)) {
@@ -176,71 +195,85 @@ class VideoCreator {
 		logs('Chunks rendering complete', 'magenta');
 	}
 
+	/* =========================================================================== */
+
 	/**
 	 * Combines everything into one large video
 	 * @param {T.PresentationInfo} presentation
 	 */
 	finalRender(presentation) {
+		const finalFileLocation = path.resolve(
+			presentation.folderLocation,
+			`${presentation.outputFileName}.mp4`
+		);
+
 		// Extract timestamps for each slide / sharescreen from shapes.svg
 		logs('Creating chunks concat list', 'yellow');
 		let shareScreenCounter = 1;
 		const slides = presentation.xmlFiles.slidesXml.svg.image;
 		const concatVideosList = [];
+		let chunksConcatLocation;
 
-		for (let slide of slides) {
-			let filePath;
-			if (slide['xlink:href'] == 'presentation/deskshare.png') {
-				filePath = path.resolve(
-					presentation.dataLocation,
-					`SCREEN_${shareScreenCounter}.mp4`
-				);
-				shareScreenCounter += 1;
-			} else {
-				filePath = path.resolve(presentation.dataLocation, `${slide.id}.mp4`);
+		if (Array.isArray(slides)) {
+			for (let slide of slides) {
+				let filePath;
+				if (slide['xlink:href'] == 'presentation/deskshare.png') {
+					filePath = path.resolve(
+						presentation.dataLocation,
+						`SCREEN_${shareScreenCounter}.mp4`
+					);
+					shareScreenCounter += 1;
+				} else {
+					filePath = path.resolve(presentation.dataLocation, `${slide.id}.mp4`);
+				}
+
+				concatVideosList.push(`file '${filePath}'`);
 			}
 
-			concatVideosList.push(`file '${filePath}'`);
+			const concatListLocation = path.resolve(
+				presentation.dataLocation,
+				'CONCAT_ITEMS.txt'
+			);
+
+			fs.writeFileSync(concatListLocation, concatVideosList.join('\n'));
+
+			logs('Concat chunks', 'cyan');
+			chunksConcatLocation = path.resolve(
+				presentation.dataLocation,
+				'CHUNKS_CONCAT.mp4'
+			);
+
+			/** @type {T.Command} */
+			const ffmpegCommand = {
+				command: 'ffmpeg',
+				args: [
+					'-y',
+					'-f',
+					'concat',
+					'-safe',
+					'0',
+					'-i',
+					concatListLocation,
+					'-an',
+					'-c',
+					config.reEncodeFinalConcat ? 'libx264' : 'copy',
+					chunksConcatLocation,
+				],
+			};
+
+			executeCommand(ffmpegCommand);
+		} else {
+			// The whole presentation is one sharescreen
+			chunksConcatLocation = path.resolve(
+				presentation.dataLocation,
+				`SCREEN_1.mp4`
+			);
+			concatVideosList.push(`file '${chunksConcatLocation}'`);
 		}
-
-		const concatListLocation = path.resolve(
-			presentation.dataLocation,
-			'CONCAT_ITEMS.txt'
-		);
-
-		fs.writeFileSync(concatListLocation, concatVideosList.join('\n'));
-
-		logs('Concat chunks', 'cyan');
-		const chunksConcatLocation = path.resolve(
-			presentation.dataLocation,
-			'CHUNKS_CONCAT.mp4'
-		);
-
-		/** @type {T.Command} */
-		const ffmpegCommand = {
-			command: 'ffmpeg',
-			args: [
-				'-y',
-				'-f',
-				'concat',
-				'-safe',
-				'0',
-				'-i',
-				concatListLocation,
-				'-an',
-				'-c',
-				config.reEncodeFinalConcat ? 'libx264' : 'copy',
-				chunksConcatLocation,
-			],
-		};
-
-		executeCommand(ffmpegCommand);
 
 		logs('Combine audio with video', 'magenta');
 		const audioLocation = path.resolve(presentation.dataLocation, 'AUDIO.mp3');
-		const finalFileLocation = path.resolve(
-			presentation.folderLocation,
-			`${presentation.outputFileName}.mp4`
-		);
+
 		/** @type {T.Command} */
 		const combineAudioWithVideo = {
 			command: 'ffmpeg',
@@ -258,6 +291,8 @@ class VideoCreator {
 
 		executeCommand(combineAudioWithVideo);
 	}
+
+	/* =========================================================================== */
 }
 
 module.exports = VideoCreator;

@@ -107,15 +107,31 @@ async function convertToPngBuffer(data, type, width, height) {
 
 			const pollJimp = await Jimp.read(pollCanvas.toBuffer('image/png'));
 			const pollImg = new Image();
-			pollImg.src = await pollJimp.rotate(270).getBase64Async(Jimp.MIME_PNG);
 
-			ctx.drawImage(
-				pollImg,
-				width - pollHeight,
-				height - pollWidth,
-				pollHeight,
-				pollWidth
-			);
+			if (data.image.transform) {
+				pollJimp.rotate(270);
+			}
+
+			pollImg.src = await pollJimp.getBase64Async(Jimp.MIME_PNG);
+
+			if (data.image.transform) {
+				ctx.drawImage(
+					pollImg,
+					width - pollHeight,
+					height - pollWidth,
+					pollHeight,
+					pollWidth
+				);
+			} else {
+				// If the image wasn't rotated, draw it normally
+				ctx.drawImage(
+					pollImg,
+					width - pollWidth,
+					height - pollHeight,
+					pollWidth,
+					pollHeight
+				);
+			}
 
 			return canvas.toBuffer('image/png');
 		});

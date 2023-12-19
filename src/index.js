@@ -1,36 +1,48 @@
 const PresentationInfo = require('./class/PresentationInfo');
 const DataSorter = require('./class/DataSorter');
 const VideoCreator = require('./class/VideoCreator');
+const Helper = require('./class/Helper');
 
 async function main() {
-	console.clear();
+	const inputsFiles = await Helper.readUrlFiles();
+	Helper.setScriptStartTime();
+	Helper.clearConsole();
 
-	const input =
-		'https://bbb-lb.finki.ukim.mk/playback/presentation/2.3/5e08975ff07fc081d979f50c104694f0ad3a688a-1602142107072?meetingId=5e08975ff07fc081d979f50c104694f0ad3a688a-1602142107072';
+	for (let fileNameKey of Object.keys(inputsFiles)) {
+		for (let input of inputsFiles[fileNameKey]) {
+			const BBB = new PresentationInfo(input, fileNameKey);
+			BBB.createFolders();
+			await BBB.fetchAllXmlFiles();
+			BBB.loadCourseInfo();
 
-	const videoResolution = { width: 1920, height: 1080 };
-	const BBB = new PresentationInfo(input);
-	BBB.createFolders();
-	await BBB.fetchAllXmlFiles();
-	BBB.loadCourseInfo();
+			if (Helper.isPresentationAlreadyExported(BBB)) {
+				continue;
+			}
 
-	const DATA_SORTER = new DataSorter();
-	DATA_SORTER.mapSlidesInfo(BBB);
-	DATA_SORTER.groupCursorsByTime(BBB);
-	// await Promise.allSettled([
-	// 	DATA_SORTER.downloadAudioWorker(BBB),
-	// 	DATA_SORTER.downloadSharescreenWorker(BBB, videoResolution),
-	// 	DATA_SORTER.downloadSlidesWorker(BBB.dataLocation, videoResolution),
-	// 	DATA_SORTER.exportShapesToPngProcess(BBB, videoResolution),
-	// ]);
+			const DATA_SORTER = new DataSorter();
+			DATA_SORTER.mapSlidesInfo(BBB);
+			DATA_SORTER.groupCursorsByTime(BBB);
+			await Promise.allSettled([
+				DATA_SORTER.downloadAudioWorker(BBB),
+				DATA_SORTER.downloadSharescreenWorker(BBB, Helper.defaultResolution),
+				DATA_SORTER.downloadSlidesWorker(
+					BBB.dataLocation,
+					Helper.defaultResolution
+				),
+				DATA_SORTER.exportShapesToPngProcess(BBB, Helper.defaultResolution),
+			]);
 
-	const VIDEO_CREATOR = new VideoCreator(videoResolution);
-	VIDEO_CREATOR.createSequence(DATA_SORTER, BBB);
-	VIDEO_CREATOR.renderChunks();
-	// VIDEO_CREATOR.finalRender(BBB);
+			const VIDEO_CREATOR = new VideoCreator(Helper.defaultResolution);
+			VIDEO_CREATOR.createSequence(DATA_SORTER, BBB);
+			VIDEO_CREATOR.renderChunks();
+			VIDEO_CREATOR.finalRender(BBB);
 
-	// DATA_SORTER.createInfoFile(BBB, input);
-	DATA_SORTER.cleanUp(BBB);
+			DATA_SORTER.createInfoFile(BBB, input);
+			DATA_SORTER.cleanUp(BBB);
+		}
+	}
+
+	Helper.printScriptElapsedTime();
 }
 
 main();
