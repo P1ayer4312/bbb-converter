@@ -3,6 +3,6 @@
 	"ffmpegStatus": true,
 	"reEncodeFinalConcat": false,
 	"cleanUpWhenDone": false,
-	"numShapesExportWorkers": 2,
-	"numShapesExportProcesses": 6
+	"numShapesExportProcesses": 6,
+	"createDebugFiles": false
 }

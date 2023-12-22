@@ -81,7 +81,9 @@ class VideoCreator {
 			// "patch" broken chunks so that they won't break the final video
 			chunk.duration = duration < 0 ? 0 : duration;
 
-			const shapesDebugWriter = fs.createWriteStream(shapesDebugFileLocation);
+			const shapesDebugWriter = config.createDebugFiles
+				? fs.createWriteStream(shapesDebugFileLocation)
+				: null;
 
 			// Check if there are cursors present
 			if (slide.cursors !== null) {
@@ -95,7 +97,7 @@ class VideoCreator {
 					const start = (cursor.timestamp.start - offset).toFixed(2);
 					const end = (cursor.timestamp.end - offset).toFixed(2);
 
-					shapesDebugWriter.write(
+					shapesDebugWriter?.write(
 						`${Helper.formatTime(start)} - ${Helper.formatTime(end)}\t | ` +
 							`cursor\t\t | X: ${cursorX}\t\t\tY: ${cursorY}\n`
 					);
@@ -115,17 +117,13 @@ class VideoCreator {
 
 			// Check if there are any shapes present
 			if (slide.shapes !== null) {
-				shapesDebugWriter.write('\n');
+				shapesDebugWriter?.write('\n');
 				const lastCursor = complexFilterBuilder.length;
 
 				for (let n = 0; n < slide.shapes.length; n++) {
 					const shape = slide.shapes[n];
 					let start = Number((shape.timestamp.start - offset).toFixed(2));
 					let end = Number((shape.timestamp.end - offset).toFixed(2));
-
-					if (slide.id === 'image6') {
-						let a = 1;
-					}
 
 					if (start < 0 || start > chunk.duration) {
 						// Sometimes the offset can be greater than the timestamp,
@@ -138,7 +136,7 @@ class VideoCreator {
 						end = chunk.duration;
 					}
 
-					shapesDebugWriter.write(
+					shapesDebugWriter?.write(
 						`${Helper.formatTime(start)} - ${Helper.formatTime(end)}\t | ` +
 							`${shape.id}\n`
 					);
@@ -159,7 +157,7 @@ class VideoCreator {
 				}
 			}
 
-			shapesDebugWriter.close();
+			shapesDebugWriter?.close();
 
 			const complexFilterFileLocation = path.resolve(
 				presentation.dataLocation,
@@ -214,7 +212,12 @@ class VideoCreator {
 				complexFilterBuilder.join('')
 			);
 
-			fs.writeFileSync(commandJsonFileLocation, JSON.stringify(chunk.command));
+			if (config.createDebugFiles) {
+				fs.writeFileSync(
+					commandJsonFileLocation,
+					JSON.stringify(chunk.command)
+				);
+			}
 
 			this.sequence.push(chunk);
 		}
