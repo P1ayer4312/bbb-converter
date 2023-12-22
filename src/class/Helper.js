@@ -21,7 +21,35 @@ class Helper {
 	/** Store the initial time when the script started running */
 	static setScriptStartTime() {
 		Helper.scriptStartTime = performance.now();
-		process.title = 'BBB Converter';
+	}
+
+	/* =========================================================================== */
+
+	/**
+	 * Set window title
+	 * @param {string} value
+	 */
+	static setTitle(value) {
+		process.title = value;
+	}
+
+	/* =========================================================================== */
+
+	/**
+	 * Update the title with how many files and links are left to be processed
+	 * @param {number} fileIndex
+	 * @param {number} filesCount
+	 * @param {number} linkIndex
+	 * @param {number} linksCount
+	 * @param {string} text
+	 */
+	static updateTitleStatus(fileIndex, filesCount, linkIndex, linksCount, text) {
+		Helper.setTitle(
+			`BBB Converter | ` +
+				`File: ${fileIndex + 1}/${filesCount} - ` +
+				`Link: ${linkIndex + 1}/${linksCount}` +
+				(text ? ` | ${text}` : '')
+		);
 	}
 
 	/* =========================================================================== */
@@ -50,9 +78,27 @@ class Helper {
 		const currentTime = (end - start) / 1000; // to seconds
 		const hours = Math.floor(currentTime / 3600);
 		const rawMinutes = currentTime % 3600;
-		const minutes = Math.round(rawMinutes / 60);
-		const seconds = Math.round(rawMinutes % 60);
+		const minutes = Math.floor(rawMinutes / 60);
+		const seconds = (rawMinutes % 60).toFixed(0);
 		return `${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+	}
+
+	/* =========================================================================== */
+
+	/**
+	 * Format seconds to readable time
+	 * @param {number} value
+	 * @returns {string}
+	 */
+	static formatTime(value) {
+		const fix = (time) => {
+			return time < 10 ? `0${time}` : time;
+		};
+		const hours = Math.floor(value / 3600);
+		const rawMinutes = value % 3600;
+		const minutes = Math.floor(rawMinutes / 60);
+		const seconds = (rawMinutes % 60).toFixed(1);
+		return `${fix(hours)}:${fix(minutes)}:${fix(seconds)}`;
 	}
 
 	/* =========================================================================== */
@@ -225,6 +271,19 @@ https://example.com/presentationId=randomLongId`
 		}
 
 		return false;
+	}
+
+	/* =========================================================================== */
+
+	/**
+	 * Make the script wait (only used for testing)
+	 * @param {number} ms
+	 * @returns {Promise<void>}
+	 */
+	static async wait(ms) {
+		return new Promise((resolve) => {
+			setTimeout(resolve, ms);
+		});
 	}
 
 	/* =========================================================================== */

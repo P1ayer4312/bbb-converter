@@ -5,15 +5,26 @@ const Helper = require('./class/Helper');
 
 async function main() {
 	const inputsFiles = await Helper.readUrlFiles();
+	const fileNameKeys = Object.keys(inputsFiles);
 	Helper.setScriptStartTime();
 	Helper.clearConsole();
 
-	for (let fileNameKey of Object.keys(inputsFiles)) {
-		for (let input of inputsFiles[fileNameKey]) {
+	for (let [mIndex, fileNameKey] of fileNameKeys.entries()) {
+		const inputsFile = inputsFiles[fileNameKey];
+
+		for (let [nIndex, input] of inputsFile.entries()) {
 			const BBB = new PresentationInfo(input, fileNameKey);
 			BBB.createFolders();
 			await BBB.fetchAllXmlFiles();
 			BBB.loadCourseInfo();
+
+			Helper.updateTitleStatus(
+				mIndex,
+				fileNameKeys.length,
+				nIndex,
+				inputsFile.length,
+				BBB.getFullName()
+			);
 
 			if (Helper.isPresentationAlreadyExported(BBB)) {
 				continue;

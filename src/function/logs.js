@@ -4,10 +4,9 @@ const chalk = require('chalk');
  * Simple function for tracking steps during debugging
  * @param {string} message Message to be logged
  * @param {Colors} color Text color
- * @param {boolean} changeTerminalTitle Display the log message in the title
  * @typedef {('cyan'|'yellow'|'magenta'|'green'|'red'|'gray')} Colors
  */
-function log(message, color, changeTerminalTitle = false) {
+function log(message, color) {
 	// eslint-disable-next-line no-undef
 	if (config.consoleLogStatus) {
 		let chosenColor;
@@ -32,10 +31,6 @@ function log(message, color, changeTerminalTitle = false) {
 				break;
 			default:
 				chosenColor = chalk.gray;
-		}
-
-		if (changeTerminalTitle) {
-			process.title = message;
 		}
 
 		// eslint-disable-next-line no-console

@@ -153,12 +153,6 @@ class DataSorter {
 
 			slide.cursors = cursors.length > 0 ? cursors : null;
 		}
-
-		logs(
-			'Downloading sharescreen, audio and drawing interactions',
-			'gray',
-			true
-		);
 	}
 
 	/* =========================================================================== */

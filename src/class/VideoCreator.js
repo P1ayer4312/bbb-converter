@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const executeCommand = require('../function/executeCommand');
 const config = require('../../config.json');
+const Helper = require('./Helper');
 
 /**
  * Wrapper class for creating videos
@@ -67,7 +68,20 @@ class VideoCreator {
 			// Center slide if it's smaller than the desired resolution
 			const slideDefs =
 				`[0]pad=width=${this.resolution.width}:height=${this.resolution.height}:x=-1:y=-1:color=black,setsar=1,` +
-				`scale=${this.resolution.width}:${this.resolution.height}:force_original_aspect_ratio=1[v0];[v0]`;
+				`scale=${this.resolution.width}:${this.resolution.height}:force_original_aspect_ratio=1[v0];\n[v0]`;
+
+			const shapesDebugFileLocation = path.resolve(
+				presentation.dataLocation,
+				`${slide.id}_debug.txt`
+			);
+
+			const duration = Number(
+				(slide.timestamp.end - slide.timestamp.start).toFixed(2)
+			);
+			// "patch" broken chunks so that they won't break the final video
+			chunk.duration = duration < 0 ? 0 : duration;
+
+			const shapesDebugWriter = fs.createWriteStream(shapesDebugFileLocation);
 
 			// Check if there are cursors present
 			if (slide.cursors !== null) {
@@ -81,10 +95,15 @@ class VideoCreator {
 					const start = (cursor.timestamp.start - offset).toFixed(2);
 					const end = (cursor.timestamp.end - offset).toFixed(2);
 
+					shapesDebugWriter.write(
+						`${Helper.formatTime(start)} - ${Helper.formatTime(end)}\t | ` +
+							`cursor\t\t | X: ${cursorX}\t\t\tY: ${cursorY}\n`
+					);
+
 					complexFilterBuilder.push(
 						(n === 0 ? slideDefs : `[v${n}]`) +
 							`[1:v]overlay=${cursorX}:${cursorY}:enable='between(t,${start},${end})'` +
-							(n < slide.cursors.length - 1 ? `[v${n + 1}];` : ``)
+							(n < slide.cursors.length - 1 ? `[v${n + 1}];\n` : ``)
 					);
 				}
 			} else {
@@ -96,26 +115,52 @@ class VideoCreator {
 
 			// Check if there are any shapes present
 			if (slide.shapes !== null) {
+				shapesDebugWriter.write('\n');
 				const lastCursor = complexFilterBuilder.length;
+
 				for (let n = 0; n < slide.shapes.length; n++) {
 					const shape = slide.shapes[n];
-					const start = (shape.timestamp.start - offset).toFixed(2);
-					const end = (shape.timestamp.end - offset).toFixed(2);
+					let start = Number((shape.timestamp.start - offset).toFixed(2));
+					let end = Number((shape.timestamp.end - offset).toFixed(2));
+
+					if (slide.id === 'image6') {
+						let a = 1;
+					}
+
+					if (start < 0 || start > chunk.duration) {
+						// Sometimes the offset can be greater than the timestamp,
+						// so we just set it as 0 to appear at the chunk duration
+						// TODO: Check if the commend and logic are valid
+						start = 0;
+					}
+
+					if (end < 0 || end > chunk.duration) {
+						end = chunk.duration;
+					}
+
+					shapesDebugWriter.write(
+						`${Helper.formatTime(start)} - ${Helper.formatTime(end)}\t | ` +
+							`${shape.id}\n`
+					);
 
 					complexFilterBuilder.push(
 						(n === 0
-							? `[v${lastCursor}];[v${lastCursor}]`
-							: `[v${lastCursor + n}]`) +
+							? `[v${lastCursor}];\n[v${lastCursor}]`
+							: `\n[v${lastCursor + n}]`) +
 							`[${n + 2}:v]overlay=0:0:enable=` +
 							`'between(t,${start},${end})'` +
 							(n < slide.shapes.length - 1 ? `[v${lastCursor + n + 1}];` : ``)
 					);
+
 					inputBuilder.push(
 						'-i',
 						path.relative(relativePathStartPoint, shape.location)
 					);
 				}
 			}
+
+			shapesDebugWriter.close();
+
 			const complexFilterFileLocation = path.resolve(
 				presentation.dataLocation,
 				`${slide.id}.txt`
@@ -141,11 +186,6 @@ class VideoCreator {
 			);
 
 			chunk.id = slide.id;
-			const duration = Number(
-				(slide.timestamp.end - slide.timestamp.start).toFixed(2)
-			);
-			// "patch" broken chunks so that they won't break the final video
-			chunk.duration = duration < 0 ? 0 : duration;
 			chunk.fileLocation = videoChunkLocation;
 
 			chunk.command = {
