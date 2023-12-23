@@ -49,7 +49,7 @@ From my testing, a two hour presentation with fast internet and decent PC specs 
 | reEncodeFinalConcat      | boolean | Enable if the final concatenated video is created broken         |
 | cleanUpWhenDone          | boolean | Remove all unnecessary files created during conversion           |
 | createDebugFiles         | boolean | Creates text file with timestamps for each interaction           |
-| numShapesExportProcesses | boolean | How many Node.js processes to be created for drawing interaction |
+| numShapesExportProcesses | number  | How many Node.js processes to be created for drawing interaction |
 
 ## Possible issues
 
