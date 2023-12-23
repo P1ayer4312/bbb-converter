@@ -6,13 +6,17 @@
 
 	const a = document.createElement('a');
 	const bread = Array.from(document.querySelectorAll('.breadcrumb-item'));
-	a.download = `${bread.at(-3).innerText}-${bread.at(-1).innerText}.txt`;
+	/** @type {string} */
+	const course = bread.at(-3).innerText;
+	const coursePrefix = course.substring(0, course.indexOf('-'));
+	a.download = `${coursePrefix}-${new Date().getTime()}.txt`;
 	const blob = new Blob([pLinks.reverse().join('\n')], { type: 'plain/text' });
 
 	const reader = new FileReader();
-	reader.readAsDataURL(blob);
 	reader.onloadend = () => {
 		a.href = reader.result;
 		a.click();
 	};
+
+	reader.readAsDataURL(blob);
 })();
