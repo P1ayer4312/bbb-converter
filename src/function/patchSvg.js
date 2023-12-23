@@ -1,26 +1,27 @@
-const fetchSvgToBase64 = require('./fetchSvgToBase64');
-
 /**
  * Remove elements that prevent the svg from rendering
- * @param {Object} svg
- * @param {PresentationInfo} presentation
+ * @param {object} svg
+ * @param {import("../class/PresentationInfo")} presentation
  */
 async function patchSvg(svg, presentation) {
 	svg.style = svg.style.replace('visibility:hidden', '');
 
 	if (svg.shape?.includes('poll')) {
-		// Patch the url of polls' svgs, fetch the svg and convert it to base64,
-		// because the library that converts svgs to png can't fetch it
-		const url = `${presentation.filesUrl}/${svg.image['xlink:href']}`;
-		svg.image.href = await fetchSvgToBase64(url);
-		delete svg.image['xlink:href'];
+		// Patch the url location from where the poll is being fetched
+		// Since polls are not downloaded with the dummy data, we need
+		// to use the original url to fetch the poll
+		const url = presentation.isLocalDevEnv
+			? presentation.originalFilesUrl
+			: presentation.filesUrl;
+
+		svg.image.href = `${url}/${svg.image['xlink:href']}`;
 	}
 
 	if (svg.switch) {
 		// TODO: This needs to be further tested
 		// Convert text object into something that svg2img can understand
 
-		/** @type {Array.<String>} */
+		/** @type {string[]} */
 		const style = Array.from(new Set(svg.style.split(';')));
 		const getStyleValue = (keyName) => {
 			return style.find((el) => el.includes(keyName))?.split(':')[1] || null;
@@ -36,13 +37,24 @@ async function patchSvg(svg, presentation) {
 		// Fix font color
 		style.push(`fill:${color}`);
 
+		/** @type {string} */
+		let textValue = svg.switch.foreignObject.p['#text'];
+		if (textValue.includes('[[br/]]')) {
+			// Fix text line breaks
+			const xPos = svg.switch.foreignObject.x;
+			textValue = textValue
+				.split('[[br/]]')
+				.map((el) => `<tspan x="${xPos}" dy="1.1em">${el}</tspan>`)
+				.join('');
+		}
+
 		const text = {
 			x: svg.switch.foreignObject.x,
 			y: yPos,
 			style: style.join(';'),
-			textValue: svg.switch.foreignObject.p['#text'],
+			textValue,
 		};
-		
+
 		delete svg.switch.foreignObject.p['#text'];
 		svg.text = text;
 	}

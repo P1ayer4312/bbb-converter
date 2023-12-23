@@ -1,24 +1,17 @@
-const { execSync, spawnSync } = require('node:child_process');
+// eslint-disable-next-line no-unused-vars
+const T = require('../types/typedefs');
+const { spawnSync } = require('node:child_process');
 const config = require('../../config.json');
 
 /**
  * Execute shell command
- * @param {String} command
+ * @param {T.Command} value
  */
-function executeCommand(command) {
-	try {
-		execSync(command, {
-			stdio: config.ffmpegStatus ? 'inherit' : 'ignore',
-		});
-	} catch {
-		// Command is too long, go with 'spawnSync'
-		// Honestly I'm too lazy to go and change everything to
-		// work with spawnSync only
-		const cmd = command.split(' ');
-		spawnSync(cmd[0], cmd.slice(1), {
-			stdio: config.ffmpegStatus ? 'inherit' : 'ignore',
-		});
-	}
+function executeCommand(value) {
+	spawnSync(value.command, value.args, {
+		stdio: config.ffmpegStatus ? 'inherit' : 'ignore',
+		cwd: value.cwd ?? undefined,
+	});
 }
 
 module.exports = executeCommand;

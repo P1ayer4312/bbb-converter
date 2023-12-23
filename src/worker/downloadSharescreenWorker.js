@@ -4,14 +4,14 @@ const fs = require('node:fs');
 const logs = require('../function/logs');
 const executeCommand = require('../function/executeCommand');
 // eslint-disable-next-line no-unused-vars
-const typedefs = require('../types/typedefs');
+const T = require('../types/typedefs');
 
 const shareScreenChunks = [];
 
 /**
  * Download sharescreen parts
- * @param {PresentationInfo} presentation
- * @param {typedefs.Resolution} resolution
+ * @param {T.PresentationInfo} presentation
+ * @param {T.Resolution} resolution
  * @returns {Promise<void>}
  */
 async function downloadSharescreen(presentation, resolution) {
@@ -26,8 +26,8 @@ async function downloadSharescreen(presentation, resolution) {
 		if (presentation.xmlFiles.deskshareXml.recording?.event) {
 			/**
 			 * This part is repeating, so we make it a function
-			 * @param {typedefs.DeskshareRecordingEventValues} chunk
-			 * @param {Number} index
+			 * @param {T.DeskshareRecordingEventValues} chunk
+			 * @param {number} index
 			 */
 			const downloadChunk = (chunk, index) => {
 				const fileName = `SCREEN_${index}.mp4`;
@@ -41,9 +41,25 @@ async function downloadSharescreen(presentation, resolution) {
 				const start = Number(chunk.start_timestamp);
 				const end = Number(chunk.stop_timestamp);
 				const duration = Number((end - start).toFixed(2));
-				const ffmpegCommand =
-					`ffmpeg -y -ss ${start} -i ${presentation.videoFilesUrls.deskshare} ` +
-					`-t ${duration} -r 20 -vf scale=${resolution.width}:${resolution.height} ${fileLocation}`;
+
+				/** @type {T.Command} */
+				const ffmpegCommand = {
+					command: 'ffmpeg',
+					args: [
+						'-y',
+						'-ss',
+						start,
+						'-i',
+						presentation.videoFilesUrls.deskshare,
+						'-t',
+						duration,
+						'-r',
+						'20',
+						'-vf',
+						`scale=${resolution.width}:${resolution.height}`,
+						fileLocation,
+					],
+				};
 
 				logs(`Downloading ${fileName}`, 'cyan');
 				executeCommand(ffmpegCommand);

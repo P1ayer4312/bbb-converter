@@ -1,26 +1,21 @@
-const { parentPort, workerData } = require('node:worker_threads');
 const path = require('node:path');
 const fs = require('node:fs');
+const logs = require('../function/logs');
 const drawSvgToPng = require('../function/drawSvgToPng');
 const patchSvg = require('../function/patchSvg');
 // eslint-disable-next-line no-unused-vars
-const typedefs = require('../types/typedefs');
-// eslint-disable-next-line no-unused-vars
-const PresentationInfo = require('../class/PresentationInfo');
+const T = require('../types/typedefs');
 
 /**
  * Export drawn shapes from svg to png format
- * @param {PresentationInfo} presentation
- * @param {typedefs.Resolution} resolution
- * @param {Array.<typedefs.Slide>|null} slides
+ * @type {T.ExportShapesToPngFuncProps}
  */
 async function exportShapesToPngFunc(presentation, resolution, slides) {
-	parentPort.postMessage('Drawing shapes to png format');
+	logs('Drawing shapes to png format', 'cyan');
 	const shapesSvg = presentation.xmlFiles.slidesXml.svg.g;
-	const slidesWithShapes = slides.filter((el) => el.shapes !== null);
-
+	const slidesWithShapes = slides?.filter((el) => el.shapes !== null) ?? [];
 	if (Array.isArray(shapesSvg)) {
-		for (let shape of shapesSvg) {
+		for await (let shape of shapesSvg) {
 			shape.display = '';
 			if (Array.isArray(shape.g)) {
 				for (let svg of shape.g) {
@@ -29,14 +24,19 @@ async function exportShapesToPngFunc(presentation, resolution, slides) {
 						`${svg.id}.png`
 					);
 					if (fs.existsSync(filePath)) {
-						parentPort.postMessage(`Skipping ${svg.id}, file exists`);
+						logs(`Skipping ${svg.id}, file exists`, 'red');
 						continue;
 					}
 
-					await patchSvg(svg, presentation);
+					patchSvg(svg, presentation);
 					const parentSlide = slidesWithShapes.find(
 						(el) => el.id == shape.image
 					);
+
+					if (!parentSlide) {
+						continue;
+					}
+
 					await drawSvgToPng(
 						parentSlide.resolution.width,
 						parentSlide.resolution.height,
@@ -46,19 +46,24 @@ async function exportShapesToPngFunc(presentation, resolution, slides) {
 						filePath
 					);
 				}
-			} 
-			else {
+			} else {
 				const svg = shape.g;
 				const filePath = path.resolve(
 					presentation.shapesLocation,
 					`${svg.id}.png`
 				);
 				if (fs.existsSync(filePath)) {
-					parentPort.postMessage(`Skipping ${svg.id}, file exists`);
+					logs(`Skipping ${svg.id}, file exists`, 'red');
 					continue;
 				}
-				await patchSvg(svg, presentation).catch(console.log);
+
+				patchSvg(svg, presentation);
 				const parentSlide = slidesWithShapes.find((el) => el.id == shape.image);
+
+				if (!parentSlide) {
+					continue;
+				}
+
 				await drawSvgToPng(
 					parentSlide.resolution.width,
 					parentSlide.resolution.height,
@@ -69,11 +74,10 @@ async function exportShapesToPngFunc(presentation, resolution, slides) {
 				);
 			}
 		}
-	} 
+	}
 }
 
-exportShapesToPngFunc(
-	workerData.presentation,
-	workerData.resolution,
-	workerData.slides
-);
+process.on('message', async (data) => {
+	await exportShapesToPngFunc(data.presentation, data.resolution, data.slides);
+	process.exit(0);
+});

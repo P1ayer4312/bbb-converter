@@ -1,72 +1,90 @@
 // eslint-disable-next-line no-unused-vars
-const PresentationInfo = require('./PresentationInfo');
-// eslint-disable-next-line no-unused-vars
-const typedefs = require('../types/typedefs');
+const T = require('../types/typedefs');
 const logs = require('../function/logs');
 const path = require('node:path');
 const fs = require('node:fs');
 const createWorker = require('../function/createWorker');
 const executeCommand = require('../function/executeCommand');
 const config = require('../../config.json');
+const createShapeExportProcesses = require('../function/createShapeExportProcesses');
 
 /**
  * Wrapper class for managing and sorting slides' data
  */
 class DataSorter {
+	/* =========================================================================== */
+
 	constructor() {
 		logs('Creating "DataSorter" instance', 'yellow');
-		/**
-		 * @type {Array.<typedefs.Slide>|null}
-		 */
+		/**@type {T.Slide[] | null} */
 		this.slides = null;
-		/**
-		 * @type {Array.<typedefs.SharescreenChunks>|[]}
-		 */
+		/** @type {T.SharescreenChunks[] | []} */
 		this.shareScreenChunks = [];
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Map slides values from the shapes xml file and store them
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 */
 	mapSlidesInfo(presentation) {
 		const shapesXml = presentation.xmlFiles.slidesXml;
 		const slides = [];
 		logs('Mapping slides data', 'cyan');
-		for (let image of shapesXml.svg.image) {
-			// Skip placeholder images used where screen sharing takes place
-			const imageHref = image['xlink:href'];
-			if (imageHref == 'presentation/deskshare.png') {
-				continue;
-			}
-			/**
-			 * @type {typedefs.Slide}
-			 */
-			const slideInfo = {
-				id: image.id,
-				timestamp: {
-					start: parseFloat(image.in),
-					end: parseFloat(image.out),
-				},
-				resolution: {
-					width: parseInt(image.width),
-					height: parseInt(image.height),
-				},
-				url: `${presentation.filesUrl}/${imageHref}`,
-				fileName: imageHref.substring(imageHref.lastIndexOf('/') + 1),
-				shapes: null,
-				cursors: null,
-			};
+		if (Array.isArray(shapesXml.svg.image)) {
+			for (let image of shapesXml.svg.image) {
+				// Skip placeholder images used where screen sharing takes place
+				const imageHref = image['xlink:href'];
+				if (imageHref == 'presentation/deskshare.png') {
+					continue;
+				}
+				/**@type {T.Slide} */
+				const slideInfo = {
+					id: image.id,
+					timestamp: {
+						start: parseFloat(image.in),
+						end: parseFloat(image.out),
+					},
+					resolution: {
+						width: parseInt(image.width),
+						height: parseInt(image.height),
+					},
+					url: `${presentation.filesUrl}/${imageHref}`,
+					fileName: imageHref.substring(imageHref.lastIndexOf('/') + 1),
+					shapes: null,
+					cursors: null,
+				};
 
-			// Check if there are drawn shapes present
-			if (shapesXml.svg.g) {
-				const shapes = Array.isArray(shapesXml.svg.g)
-					? shapesXml.svg.g.find((el) => el.image == image.id)
-					: shapesXml.svg.g;
+				// Check if there are drawn shapes present
+				if (shapesXml.svg.g) {
+					const shapes = Array.isArray(shapesXml.svg.g)
+						? shapesXml.svg.g.find((el) => el.image == image.id)
+						: shapesXml.svg.g;
 
-				if (shapes) {
-					const shapesInfo = [];
-					if (Array.isArray(shapes.g)) {
-						for (let shape of shapes.g) {
+					if (shapes) {
+						const shapesInfo = [];
+						if (Array.isArray(shapes.g)) {
+							for (let shape of shapes.g) {
+								const temp = {
+									id: shape.id,
+									timestamp: {
+										start: parseFloat(shape.timestamp),
+										end:
+											shape.undo == '-1'
+												? slideInfo.timestamp.end
+												: parseFloat(shape.undo),
+									},
+									location: path.resolve(
+										presentation.shapesLocation,
+										`${shape.id}.png`
+									),
+								};
+
+								shapesInfo.push(temp);
+							}
+						} else {
+							const shape = shapes.g;
 							const temp = {
 								id: shape.id,
 								timestamp: {
@@ -84,44 +102,59 @@ class DataSorter {
 
 							shapesInfo.push(temp);
 						}
-					} else {
-						const shape = shapes.g;
-						const temp = {
-							id: shape.id,
-							timestamp: {
-								start: parseFloat(shape.timestamp),
-								end:
-									shape.undo == '-1'
-										? slideInfo.timestamp.end
-										: parseFloat(shape.undo),
-							},
-							location: path.resolve(
-								presentation.shapesLocation,
-								`${shape.id}.png`
-							),
-						};
 
-						shapesInfo.push(temp);
+						slideInfo.shapes = shapesInfo;
 					}
-
-					slideInfo.shapes = shapesInfo;
 				}
-			}
 
-			slides.push(slideInfo);
+				slides.push(slideInfo);
+			}
 		}
 
 		this.slides = slides;
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Groups cursors by slide start and end
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 */
 	groupCursorsByTime(presentation) {
 		// Parse xml cursors
 		logs('Grouping cursor data per slide', 'cyan');
 		const cursorsHolder = [];
 		const events = presentation.xmlFiles.cursorXml.recording.event;
+		const panZoomEvents = presentation.xmlFiles.panZoomsXml.recording.event;
+		/** @type {T.PanZoom[]} */
+		const panZoomHolder = [];
+
+		for (let n = 0; n < panZoomEvents.length - 1; n++) {
+			const el = panZoomEvents[n];
+			const nextEl = panZoomEvents[n + 1];
+			const viewBoxParts = el.viewBox
+				.split(' ')
+				.map((item) => Number(Number(item).toFixed(2)));
+
+			/**	@type {T.PanZoom} */
+			const event = {
+				timestamp: {
+					start: Number(el.timestamp),
+					end: nextEl
+						? Number(Number(nextEl.timestamp).toFixed(1))
+						: presentation.duration,
+				},
+				viewBox: {
+					x: viewBoxParts[0],
+					y: viewBoxParts[1],
+					width: viewBoxParts[2],
+					height: viewBoxParts[3],
+				},
+			};
+
+			panZoomHolder.push(event);
+		}
+
 		for (let n = 0; n < events.length - 1; n++) {
 			const point = events[n];
 			const cursorPos = point.cursor.split(' ').map((el) => parseFloat(el));
@@ -139,6 +172,7 @@ class DataSorter {
 				},
 			});
 		}
+
 		// Group them in their appropriate slides filtered by time
 		for (let slide of this.slides) {
 			const cursors = cursorsHolder.filter((cursor) => {
@@ -148,12 +182,23 @@ class DataSorter {
 				);
 			});
 
+			// const panZoom = panZoomHolder.filter((el) => {
+			// 	return (
+			// 		slide.timestamp.start <= el.timestamp.start ||
+			// 		slide.timestamp.end >= el.timestamp.end
+			// 	);
+			// });
+
 			slide.cursors = cursors.length > 0 ? cursors : null;
+			slide.panZoom = panZoomHolder.length > 0 ? panZoomHolder : null;
 		}
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Extract and download audio from webcam
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @returns {Promise<void>}
 	 */
 	async downloadAudio(presentation) {
@@ -172,76 +217,13 @@ class DataSorter {
 			resolve();
 		});
 	}
-	/**
-	 * Download sharescreen parts
-	 * @param {PresentationInfo} presentation
-	 * @returns {Promise<void>}
-	 */
-	async downloadSharescreen(presentation) {
-		/*
-		- Because of the way sharescreen is stored, it's just a large file filled
-			with empty space with occasional chunks of sharescreen, so we make 
-			this function only download those chunks instead of the whole video.
-		- If there are no 'chunks' we download the whole video.
-		*/
-		logs('Downloading sharescreen chunks', 'cyan');
-		return await new Promise((resolve) => {
-			if (presentation.xmlFiles.deskshareXml.recording?.event) {
-				/**
-				 * This part is repeating, so we make it a function
-				 * @param {typedefs.DeskshareRecordingEventValues} chunk
-				 * @param {Number} index
-				 */
-				const downloadChunk = (chunk, index) => {
-					const fileName = `SCREEN_${index}.mp4`;
-					const fileLocation = path.resolve(
-						presentation.dataLocation,
-						fileName
-					);
 
-					if (fs.existsSync(fileLocation)) {
-						return;
-					}
+	/* =========================================================================== */
 
-					const start = Number(chunk.start_timestamp);
-					const end = Number(chunk.stop_timestamp);
-					const duration = Number((end - start).toFixed(2));
-					const ffmpegCommand =
-						`ffmpeg -y -i ${presentation.videoFilesUrls.deskshare} -ss ${start} ` +
-						`-t ${duration} -vf scale=1920:1080 ${fileLocation}`;
-
-					logs(`Downloading ${fileName}`, 'cyan');
-					executeCommand(ffmpegCommand);
-					this.shareScreenChunks.push({
-						start,
-						end,
-						duration,
-						fileLocation,
-						fileName,
-					});
-				};
-
-				const event = presentation.xmlFiles.deskshareXml.recording.event;
-				if (Array.isArray(event)) {
-					for (let n = 0; n < event.length; n++) {
-						downloadChunk(event[n], n + 1);
-					}
-				} else {
-					downloadChunk(event, 1);
-				}
-
-				logs('Sharescreen download complete', 'magenta');
-			} else {
-				logs('No sharescreen detected', 'magenta');
-			}
-
-			resolve();
-		});
-	}
 	/**
 	 * Download presentation slides as Worker
-	 * @param {String} downloadFolder
-	 * @param {typedefs.Resolution} resolution
+	 * @param {string} downloadFolder
+	 * @param {T.Resolution} resolution
 	 */
 	downloadSlidesWorker(downloadFolder, resolution) {
 		return createWorker(
@@ -254,25 +236,33 @@ class DataSorter {
 			'Downloading slides complete'
 		);
 	}
+
+	/* =========================================================================== */
+
 	/**
-	 * Export drawn shapes from svg to png format as Worker
-	 * @param {PresentationInfo} presentation
-	 * @param {typedefs.Resolution} resolution
+	 * Export drawn shapes from svg to png format as separate Node process
+	 * @param {T.PresentationInfo} presentation
+	 * @param {T.Resolution} resolution
 	 */
-	exportShapesToPngWorker(presentation, resolution) {
-		return createWorker(
-			'./src/worker/exportShapesToPngWorker.js',
-			{
-				presentation,
+	exportShapesToPngProcess(presentation, resolution) {
+		if (this.slides.length > 0) {
+			return createShapeExportProcesses({
+				filePath: path.resolve('src', 'process', 'exportShapesToPngProcess.js'),
 				resolution,
 				slides: this.slides,
-			},
-			'Drawing shapes complete'
-		);
+				presentation,
+			});
+		} else {
+			logs('No slides found', 'magenta');
+			return Promise.resolve();
+		}
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Extract and download audio from webcam as Worker
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 * @returns {Promise<void>}
 	 */
 	downloadAudioWorker(presentation) {
@@ -284,10 +274,13 @@ class DataSorter {
 			'Audio download complete'
 		);
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Download sharescreen parts as Worker
-	 * @param {PresentationInfo} presentation
-	 * @param {typedefs.Resolution} resolution
+	 * @param {T.PresentationInfo} presentation
+	 * @param {T.Resolution} resolution
 	 */
 	async downloadSharescreenWorker(presentation, resolution) {
 		return createWorker(
@@ -302,11 +295,14 @@ class DataSorter {
 			}
 		);
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Create an info file with the presentation name, url and
 	 * presentation timestamps
-	 * @param {PresentationInfo} presentation
-	 * @param {String} presentationLink
+	 * @param {T.PresentationInfo} presentation
+	 * @param {string} presentationLink
 	 */
 	createInfoFile(presentation, presentationLink) {
 		logs('Creating presentation info file', 'cyan');
@@ -338,17 +334,22 @@ class DataSorter {
 		const infoFileTemplate =
 			`${presentation.getFullName()}\n` +
 			`${presentationLink}\n\n` +
-			`Timestamps:\n` +
-			`${timestamps.join('\n')}`;
+			`Conversion time: ${presentation.getConversionDuration()}` +
+			(timestamps.length > 0
+				? `\n\nTimestamps:\n` + `${timestamps.join('\n')}`
+				: '');
 
 		fs.writeFileSync(
 			path.resolve(presentation.folderLocation, `presentation_info.txt`),
 			infoFileTemplate
 		);
 	}
+
+	/* =========================================================================== */
+
 	/**
 	 * Remove unused files after the final video is exported
-	 * @param {PresentationInfo} presentation
+	 * @param {T.PresentationInfo} presentation
 	 */
 	cleanUp(presentation) {
 		if (config.cleanUpWhenDone) {
@@ -357,18 +358,10 @@ class DataSorter {
 			fs.rmSync(presentation.shapesLocation, { recursive: true, force: true });
 		}
 
-		const fileLocation = path.resolve(
-			presentation.folderLocation,
-			`${presentation.outputFileName}.mp4`
-		);
-
-		logs(
-			`Done! Elapsed time: ${presentation.getConversionDuration()}`,
-			'green'
-		);
-		logs('The presentation file can be found at:', 'green');
-		logs(`"${fileLocation}"`, 'green');
+		logs(`Done!`, 'green');
 	}
+
+	/* =========================================================================== */
 }
 
 module.exports = DataSorter;

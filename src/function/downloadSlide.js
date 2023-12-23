@@ -8,9 +8,9 @@ const logs = require('./logs');
 
 /**
  * Function for downloading slide image
- * @param {String} url
- * @param {String} downloadFolder
- * @param {Number?} videoHeight
+ * @param {string} url
+ * @param {string} downloadFolder
+ * @param {number?} videoHeight
  * @returns {Promise<void>}
  */
 async function downloadSlide(url, downloadFolder, videoHeight) {
@@ -47,7 +47,7 @@ async function downloadSlide(url, downloadFolder, videoHeight) {
 				resolve();
 			});
 		});
-		
+
 		writable.on('error', reject);
 	});
 }

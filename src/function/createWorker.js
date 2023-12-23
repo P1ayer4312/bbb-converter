@@ -1,26 +1,31 @@
 const { Worker } = require('node:worker_threads');
 const logs = require('./logs');
+
 /**
  * Create new worker
- * @param {String} workerFileLocation
+ * @param {string} workerFileLocation
  * @param {Object} workerData
- * @param {String} workerEndMessage
+ * @param {string} workerEndMessage
  * @param {Function} callback
  */
-async function createWorker(
+function createWorker(
 	workerFileLocation,
 	workerData,
 	workerEndMessage,
 	callback
 ) {
-	return await new Promise((resolve, reject) => {
+	return new Promise((resolve, reject) => {
 		const worker = new Worker(workerFileLocation, {
 			workerData,
 		});
 
 		worker.on('message', (data) => {
-			if (callback && typeof data === 'object') {
-				callback(data);
+			if (typeof data === 'object') {
+				if (data.exit) {
+					worker.emit('exit');
+				} else if (callback) {
+					callback(data);
+				}
 			} else {
 				logs(data, 'cyan');
 			}
@@ -36,6 +41,7 @@ async function createWorker(
 		});
 
 		worker.on('exit', () => {
+			worker.terminate();
 			logs(workerEndMessage, 'magenta');
 			logs(`Worker stopped: ${workerFileLocation}`);
 			resolve(workerEndMessage);

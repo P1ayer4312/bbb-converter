@@ -2,8 +2,9 @@ const config = require('../../config.json');
 const chalk = require('chalk');
 /**
  * Simple function for tracking steps during debugging
- * @param {String} message
- * @param {('cyan'|'yellow'|'magenta'|'green'|'red')} color
+ * @param {string} message Message to be logged
+ * @param {Colors} color Text color
+ * @typedef {('cyan'|'yellow'|'magenta'|'green'|'red'|'gray')} Colors
  */
 function log(message, color) {
 	// eslint-disable-next-line no-undef
@@ -25,10 +26,14 @@ function log(message, color) {
 			case 'red':
 				chosenColor = chalk.red;
 				break;
+			case 'gray':
+				chosenColor = chalk.gray;
+				break;
 			default:
 				chosenColor = chalk.gray;
 		}
 
+		// eslint-disable-next-line no-console
 		console.log(
 			`[${chalk.blue(new Date().toLocaleTimeString())}] ` +
 				`${chosenColor(message)} `

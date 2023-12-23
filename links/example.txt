@@ -1,0 +1,9 @@
+
+# - Empty lines and lines starting with hashtags are ignored
+# - If the script is ran and there are invalid lines/links, the
+#   script will prompt the user if it should proceed running and
+#   ignore the invalid ones
+# - The exported presentations will be located inside a folder
+#   with the same name as the text file inside "presentations"
+
+https://example.com/presentationId=randomLongId

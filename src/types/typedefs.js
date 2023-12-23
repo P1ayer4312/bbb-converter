@@ -3,84 +3,133 @@
  */
 
 /**
+ * @typedef {import("../class/PresentationInfo")} PresentationInfo
+ * @typedef {import("../class/DataSorter")} DataSorter
+ * @typedef {import("../class/VideoCreator")} VideoCreator
+ */
+
+/**
  * Resolution of the video
- * @typedef {Object} Resolution
- * @property {Number} width
- * @property {Number} height
+ * @typedef {object} Resolution
+ * @prop {number} width
+ * @prop {number} height
  */
 
 /**
- * @typedef {Object} Timestamp
- * @property {Number} start
- * @property {Number} end
+ * @typedef {object} Timestamp
+ * @prop {number} start
+ * @prop {number} end
  */
 
 /**
- * @typedef {Object} Position
- * @property {Number} posX
- * @property {Number} posY
+ * @typedef {object} Position
+ * @prop {number} posX
+ * @prop {number} posY
  */
 
 /**
- * @typedef {Object} Shape
- * @property {String} id
- * @property {Timestamp} timestamp
- * @property {String} location
+ * @typedef {object} Shape
+ * @prop {string} id
+ * @prop {Timestamp} timestamp
+ * @prop {string} location
  */
 
 /**
- * @typedef {Object} Cursor
- * @property {Timestamp} timestamp
- * @property {Position} position
+ * @typedef {object} Cursor
+ * @prop {Timestamp} timestamp
+ * @prop {Position} position
  */
 
 /**
- * @typedef {Object} Slide
- * @property {String} id Slide name
- * @property {String} fileName Image file name
- * @property {Timestamp} timestamp Slide start and end point
- * @property {Resolution} resolution Slide resolution
- * @property {String} url Url to where the slide image is located
- * @property {(Array.<Shape>|null)} shapes Array of drawn shapes during presentation
- * @property {(Array.<Cursor>|null)} cursors Array of cursor movements during presentation
+ * @typedef {object} Slide
+ * @prop {string} id Slide name
+ * @prop {string} fileName Image file name
+ * @prop {Timestamp} timestamp Slide start and end point
+ * @prop {Resolution} resolution Slide resolution
+ * @prop {string} url Url to where the slide image is located
+ * @prop {Shape[] | null} shapes Array of drawn shapes during presentation
+ * @prop {Cursor[] | null} cursors Array of cursor movements during presentation
+ * @prop {PanZoom[] | null} panZoom Points at which the presentation is being zoomed on
+ */
+
+/**
+ * @typedef {object} Command
+ * @prop {string} command
+ * @prop {string} cwd
+ * @prop {string[]} args
  */
 
 /**
  * Used for storing information about data for a certain slide
  * when creating a sequence
- * @typedef {Object} Chunk
- * @property {String} id
- * @property {Number} width
- * @property {Number} height
- * @property {Timestamp} timestamp
- * @property {String} command FFMPEG command
- * @property {Number} duration Chunk duration in seconds
- * @property {String} fileLocation
+ * @typedef {object} Chunk
+ * @prop {string} id
+ * @prop {number} width
+ * @prop {number} height
+ * @prop {Timestamp} timestamp
+ * @prop {Command} command FFMPEG command
+ * @prop {number} duration Chunk duration in seconds
+ * @prop {string} fileLocation
  */
 
 /**
  * Values inside the 'event' object for deskshare
- * @typedef {Object} DeskshareRecordingEventValues
- * @property {String} start_timestamp Number
- * @property {String} stop_timestamp Number
- * @property {String} video_height Number
- * @property {String} video_width Number
+ * @typedef {object} DeskshareRecordingEventValues
+ * @prop {string} start_timestamp number
+ * @prop {string} stop_timestamp number
+ * @prop {string} video_height number
+ * @prop {string} video_width number
  */
 
 /**
  * 'deskshare.xml' definition
- * @typedef {Object} DeskshareXML
- * @property {{event: DeskshareRecordingEventValues | Array.<DeskshareRecordingEventValues> | undefined}} recording
+ * @typedef {object} DeskshareXML
+ * @prop {{event: DeskshareRecordingEventValues | DeskshareRecordingEventValues[] | undefined}} recording
  */
 
 /**
  * Timestamps and durations for sharescreen chunks
- * @typedef {Object} SharescreenChunks
- * @property {Number} start
- * @property {Number} end
- * @property {Number} duration
- * @property {String} fileLocation
- * @property {String} fileName
+ * @typedef {object} SharescreenChunks
+ * @prop {number} start
+ * @prop {number} end
+ * @prop {number} duration
+ * @prop {string} fileLocation
+ * @prop {string} fileName
+ */
+
+/**
+ * Child process props
+ * @typedef {object} CreateShapeExportProcessesProps
+ * @prop {string} filePath
+ * @prop {Resolution} resolution
+ * @prop {Slide[]} slides
+ * @prop {PresentationInfo} presentation
+ */
+
+/**
+ * Shapes export function params
+ * @callback ExportShapesToPngFuncProps
+ * @param {PresentationInfo} presentation
+ * @param {Resolution} resolution
+ * @param {Slide[] | null} slides
+ */
+
+/**
+ * @typedef {Object.<string, string[]>} UrlFiles
+ */
+
+/**
+ * @typedef {Object} ViewBox
+ * @prop {number} x
+ * @prop {number} y
+ * @prop {number} width
+ * @prop {number} height
+ */
+
+/**
+ * @typedef {Object} PanZoom
+ * @prop {Timestamp} timestamp
+ * @prop {ViewBox} viewBox
  */
 
 module.exports.unused = {};
