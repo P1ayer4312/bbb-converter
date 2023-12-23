@@ -13,7 +13,7 @@ const T = require('../types/typedefs');
 async function exportShapesToPngFunc(presentation, resolution, slides) {
 	logs('Drawing shapes to png format', 'cyan');
 	const shapesSvg = presentation.xmlFiles.slidesXml.svg.g;
-	const slidesWithShapes = slides.filter((el) => el.shapes !== null);
+	const slidesWithShapes = slides?.filter((el) => el.shapes !== null) ?? [];
 	if (Array.isArray(shapesSvg)) {
 		for await (let shape of shapesSvg) {
 			shape.display = '';

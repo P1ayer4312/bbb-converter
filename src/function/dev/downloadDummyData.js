@@ -7,8 +7,7 @@ const PresentationInfo = require('../../class/PresentationInfo');
  * for simulating data during development
  */
 async function downloadDummyData() {
-	const presentationUrl =
-		'https://bbb-lb.finki.ukim.mk/playback/presentation/2.3/61dfb48384f4e231a4d9fb1a500c7c757b9d3b11-1646382711869';
+	const presentationUrl = 'BBB_URL_HERE';
 
 	const dummyDataLocation = path.resolve('src', 'devDummyData');
 	if (!fs.existsSync(dummyDataLocation)) {

@@ -88,14 +88,41 @@ class VideoCreator {
 			// Check if there are cursors present
 			if (slide.cursors !== null) {
 				for (let n = 0; n < slide.cursors.length; n++) {
+					let cursorX, cursorY;
 					const cursor = slide.cursors[n];
-					const cursorX = (
-						chunk.width * cursor.position.posX +
-						padding
-					).toFixed(2);
-					const cursorY = (chunk.height * cursor.position.posY).toFixed(2);
 					const start = (cursor.timestamp.start - offset).toFixed(2);
 					const end = (cursor.timestamp.end - offset).toFixed(2);
+					const panZoom =
+						slide.panZoom?.find((zoom) => {
+							return (
+								// i hate my life
+								(zoom.timestamp.start <= cursor.timestamp.start &&
+									zoom.timestamp.end >= cursor.timestamp.end) ||
+								zoom.timestamp.start >= cursor.timestamp.start
+							);
+						}) ?? null;
+
+					if (panZoom) {
+						// Calculate the cursor position on the original resolution, then
+						// translate that position to the desired resolution
+						const tempCursorX =
+							panZoom.viewBox.width * cursor.position.posX + panZoom.viewBox.x;
+						const tempCursorY =
+							panZoom.viewBox.height * cursor.position.posY + panZoom.viewBox.y;
+
+						cursorX = (
+							(tempCursorX / slide.resolution.width) * chunk.width +
+							padding
+						).toFixed(2);
+
+						cursorY = (
+							(tempCursorY / slide.resolution.height) *
+							chunk.height
+						).toFixed(2);
+					} else {
+						cursorX = (chunk.width * cursor.position.posX + padding).toFixed(2);
+						cursorY = (chunk.height * cursor.position.posY).toFixed(2);
+					}
 
 					shapesDebugWriter?.write(
 						`${Helper.formatTime(start)} - ${Helper.formatTime(end)}\t | ` +
@@ -226,7 +253,7 @@ class VideoCreator {
 	/* =========================================================================== */
 
 	renderChunks() {
-		for (let chunk of this.sequence) {
+		for (let chunk of this.sequence.slice(8, 9)) {
 			if (fs.existsSync(chunk.fileLocation)) {
 				logs(`Skipping ${chunk.id}, video chunk exists`, 'red');
 				continue;

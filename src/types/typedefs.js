@@ -48,7 +48,8 @@
  * @prop {Resolution} resolution Slide resolution
  * @prop {string} url Url to where the slide image is located
  * @prop {Shape[] | null} shapes Array of drawn shapes during presentation
- * @prop {Cursor[] |null} cursors Array of cursor movements during presentation
+ * @prop {Cursor[] | null} cursors Array of cursor movements during presentation
+ * @prop {PanZoom[] | null} panZoom Points at which the presentation is being zoomed on
  */
 
 /**
@@ -128,6 +129,20 @@
 
 /**
  * @typedef {Object.<string, string[]>} UrlFiles
+ */
+
+/**
+ * @typedef {Object} ViewBox
+ * @prop {number} x
+ * @prop {number} y
+ * @prop {number} width
+ * @prop {number} height
+ */
+
+/**
+ * @typedef {Object} PanZoom
+ * @prop {Timestamp} timestamp
+ * @prop {ViewBox} viewBox
  */
 
 module.exports.unused = {};

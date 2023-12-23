@@ -125,6 +125,36 @@ class DataSorter {
 		logs('Grouping cursor data per slide', 'cyan');
 		const cursorsHolder = [];
 		const events = presentation.xmlFiles.cursorXml.recording.event;
+		const panZoomEvents = presentation.xmlFiles.panZoomsXml.recording.event;
+		/** @type {T.PanZoom[]} */
+		const panZoomHolder = [];
+
+		for (let n = 0; n < panZoomEvents.length - 1; n++) {
+			const el = panZoomEvents[n];
+			const nextEl = panZoomEvents[n + 1];
+			const viewBoxParts = el.viewBox
+				.split(' ')
+				.map((item) => Number(Number(item).toFixed(2)));
+
+			/**	@type {T.PanZoom} */
+			const event = {
+				timestamp: {
+					start: Number(el.timestamp),
+					end: nextEl
+						? Number(Number(nextEl.timestamp).toFixed(1))
+						: presentation.duration,
+				},
+				viewBox: {
+					x: viewBoxParts[0],
+					y: viewBoxParts[1],
+					width: viewBoxParts[2],
+					height: viewBoxParts[3],
+				},
+			};
+
+			panZoomHolder.push(event);
+		}
+
 		for (let n = 0; n < events.length - 1; n++) {
 			const point = events[n];
 			const cursorPos = point.cursor.split(' ').map((el) => parseFloat(el));
@@ -142,6 +172,7 @@ class DataSorter {
 				},
 			});
 		}
+
 		// Group them in their appropriate slides filtered by time
 		for (let slide of this.slides) {
 			const cursors = cursorsHolder.filter((cursor) => {
@@ -151,7 +182,15 @@ class DataSorter {
 				);
 			});
 
+			// const panZoom = panZoomHolder.filter((el) => {
+			// 	return (
+			// 		slide.timestamp.start <= el.timestamp.start ||
+			// 		slide.timestamp.end >= el.timestamp.end
+			// 	);
+			// });
+
 			slide.cursors = cursors.length > 0 ? cursors : null;
+			slide.panZoom = panZoomHolder.length > 0 ? panZoomHolder : null;
 		}
 	}
 
