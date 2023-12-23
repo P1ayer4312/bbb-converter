@@ -1,5 +1,3 @@
-// const fetchSvgToBase64 = require('./fetchSvgToBase64');
-
 /**
  * Remove elements that prevent the svg from rendering
  * @param {object} svg

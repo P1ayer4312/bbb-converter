@@ -19,8 +19,6 @@ class VideoCreator {
 		/** @type {T.Chunk[]} */
 		this.sequence = [];
 		this.resolution = resolution;
-		/** @type {T.ChunkSplits | null} */
-		this.splitChunks = null;
 	}
 
 	/* =========================================================================== */
@@ -253,7 +251,7 @@ class VideoCreator {
 	/* =========================================================================== */
 
 	renderChunks() {
-		for (let chunk of this.sequence.slice(8, 9)) {
+		for (let chunk of this.sequence) {
 			if (fs.existsSync(chunk.fileLocation)) {
 				logs(`Skipping ${chunk.id}, video chunk exists`, 'red');
 				continue;
@@ -325,6 +323,8 @@ class VideoCreator {
 					'-i',
 					concatListLocation,
 					'-an',
+					'-t',
+					presentation.duration,
 					'-c',
 					config.reEncodeFinalConcat ? 'libx264' : 'copy',
 					chunksConcatLocation,
@@ -355,6 +355,8 @@ class VideoCreator {
 				audioLocation,
 				'-c',
 				'copy',
+				'-t',
+				presentation.duration,
 				finalFileLocation,
 			],
 		};

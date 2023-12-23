@@ -115,19 +115,6 @@
  */
 
 /**
- * @typedef {object} ChunkSplitDetails
- * @prop {string} id
- * @prop {number} splitStart
- * @prop {number} splitEnd
- * @prop {string} command
- * @prop {number} index
- * @prop {string} videoChunkLocation
- * @prop {{from: number, count: number}} splitRange
- *
- * @typedef {Object.<string, ChunkSplitDetails[]>} ChunkSplits
- */
-
-/**
  * @typedef {Object.<string, string[]>} UrlFiles
  */
 
