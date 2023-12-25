@@ -182,40 +182,9 @@ class DataSorter {
 				);
 			});
 
-			// const panZoom = panZoomHolder.filter((el) => {
-			// 	return (
-			// 		slide.timestamp.start <= el.timestamp.start ||
-			// 		slide.timestamp.end >= el.timestamp.end
-			// 	);
-			// });
-
 			slide.cursors = cursors.length > 0 ? cursors : null;
 			slide.panZoom = panZoomHolder.length > 0 ? panZoomHolder : null;
 		}
-	}
-
-	/* =========================================================================== */
-
-	/**
-	 * Extract and download audio from webcam
-	 * @param {T.PresentationInfo} presentation
-	 * @returns {Promise<void>}
-	 */
-	async downloadAudio(presentation) {
-		return await new Promise((resolve) => {
-			const fileLocation = path.resolve(presentation.dataLocation, 'AUDIO.mp3');
-			if (fs.existsSync(fileLocation)) {
-				resolve();
-				return;
-			}
-
-			logs('Downloading audio', 'cyan');
-			const ffmpegCommand = `ffmpeg -y -i ${presentation.videoFilesUrls.webcams} -vn ${fileLocation}`;
-
-			executeCommand(ffmpegCommand);
-			logs('Audio download complete', 'magenta');
-			resolve();
-		});
 	}
 
 	/* =========================================================================== */
