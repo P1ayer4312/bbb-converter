@@ -36,9 +36,10 @@ If you've done everything correctly, the script should start downloading all pre
 Depending on how many items need to be downloaded and generated the conversion time may vary,
 so make sure that you have a stable internet connection and enough storage on your computer.
 
-When the conversion is completed, you'll get a terminal message with the elapsed time and the location of the video file.
-From my testing, a two hour presentation with fast internet and decent PC specs gets converted in around 30 minutes
-(it's faster for shorter presentations, or ones with less interactions).
+When the conversion is completed, you'll get a terminal message with the total elapsed time. 
+The exported presentations will be located inside a folder with the same name as the text file inside `presentations`.
+Each folder has the same name as the presentation id.
+
 
 ## Config file (config.json)
 
