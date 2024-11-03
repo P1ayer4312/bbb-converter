@@ -14,40 +14,11 @@ async function exportShapesToPngFunc(presentation, resolution, slides) {
 	logs('Drawing shapes to png format', 'cyan');
 	const shapesSvg = presentation.xmlFiles.slidesXml.svg.g;
 	const slidesWithShapes = slides?.filter((el) => el.shapes !== null) ?? [];
-	if (Array.isArray(shapesSvg)) {
-		for await (let shape of shapesSvg) {
-			shape.display = '';
-			if (Array.isArray(shape.g)) {
-				for (let svg of shape.g) {
-					const filePath = path.resolve(
-						presentation.shapesLocation,
-						`${svg.id}.png`
-					);
-					if (fs.existsSync(filePath)) {
-						logs(`Skipping ${svg.id}, file exists`, 'red');
-						continue;
-					}
 
-					patchSvg(svg, presentation);
-					const parentSlide = slidesWithShapes.find(
-						(el) => el.id == shape.image
-					);
-
-					if (!parentSlide) {
-						continue;
-					}
-
-					await drawSvgToPng(
-						parentSlide.resolution.width,
-						parentSlide.resolution.height,
-						resolution.width,
-						resolution.height,
-						svg,
-						filePath
-					);
-				}
-			} else {
-				const svg = shape.g;
+	async function processShape(shape) {
+		shape.display = '';
+		if (Array.isArray(shape.g)) {
+			for (let svg of shape.g) {
 				const filePath = path.resolve(
 					presentation.shapesLocation,
 					`${svg.id}.png`
@@ -58,7 +29,9 @@ async function exportShapesToPngFunc(presentation, resolution, slides) {
 				}
 
 				patchSvg(svg, presentation);
-				const parentSlide = slidesWithShapes.find((el) => el.id == shape.image);
+				const parentSlide = slidesWithShapes.find(
+					(el) => el.id == shape.image
+				);
 
 				if (!parentSlide) {
 					continue;
@@ -73,7 +46,41 @@ async function exportShapesToPngFunc(presentation, resolution, slides) {
 					filePath
 				);
 			}
+		} else {
+			const svg = shape.g;
+			const filePath = path.resolve(
+				presentation.shapesLocation,
+				`${svg.id}.png`
+			);
+			if (fs.existsSync(filePath)) {
+				logs(`Skipping ${svg.id}, file exists`, 'red');
+				return;
+			}
+
+			patchSvg(svg, presentation);
+			const parentSlide = slidesWithShapes.find((el) => el.id == shape.image);
+
+			if (!parentSlide) {
+				return;
+			}
+
+			await drawSvgToPng(
+				parentSlide.resolution.width,
+				parentSlide.resolution.height,
+				resolution.width,
+				resolution.height,
+				svg,
+				filePath
+			);
 		}
+	}
+
+	if (Array.isArray(shapesSvg)) {
+		for (let shape of shapesSvg) {
+			await processShape(shape);
+		}
+	} else {
+		await processShape(shapesSvg);
 	}
 }
 

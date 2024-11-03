@@ -32,59 +32,40 @@ class DataSorter {
 		const shapesXml = presentation.xmlFiles.slidesXml;
 		const slides = [];
 		logs('Mapping slides data', 'cyan');
-		if (Array.isArray(shapesXml.svg.image)) {
-			for (let image of shapesXml.svg.image) {
-				// Skip placeholder images used where screen sharing takes place
-				const imageHref = image['xlink:href'];
-				if (imageHref == 'presentation/deskshare.png') {
-					continue;
-				}
-				/**@type {T.Slide} */
-				const slideInfo = {
-					id: image.id,
-					timestamp: {
-						start: parseFloat(image.in),
-						end: parseFloat(image.out),
-					},
-					resolution: {
-						width: parseInt(image.width),
-						height: parseInt(image.height),
-					},
-					url: `${presentation.filesUrl}/${imageHref}`,
-					fileName: imageHref.substring(imageHref.lastIndexOf('/') + 1),
-					shapes: null,
-					cursors: null,
-				};
 
-				// Check if there are drawn shapes present
-				if (shapesXml.svg.g) {
-					const shapes = Array.isArray(shapesXml.svg.g)
-						? shapesXml.svg.g.find((el) => el.image == image.id)
-						: shapesXml.svg.g;
+		function processImage(image) {
+			// Skip placeholder images used where screen sharing takes place
+			const imageHref = image['xlink:href'];
+			if (imageHref == 'presentation/deskshare.png') {
+				return;
+			}
+			/**@type {T.Slide} */
+			const slideInfo = {
+				id: image.id,
+				timestamp: {
+					start: parseFloat(image.in),
+					end: parseFloat(image.out),
+				},
+				resolution: {
+					width: parseInt(image.width),
+					height: parseInt(image.height),
+				},
+				url: `${presentation.filesUrl}/${imageHref}`,
+				fileName: imageHref.substring(imageHref.lastIndexOf('/') + 1),
+				shapes: null,
+				cursors: null,
+			};
 
-					if (shapes) {
-						const shapesInfo = [];
-						if (Array.isArray(shapes.g)) {
-							for (let shape of shapes.g) {
-								const temp = {
-									id: shape.id,
-									timestamp: {
-										start: parseFloat(shape.timestamp),
-										end:
-											shape.undo == '-1'
-												? slideInfo.timestamp.end
-												: parseFloat(shape.undo),
-									},
-									location: path.resolve(
-										presentation.shapesLocation,
-										`${shape.id}.png`
-									),
-								};
+			// Check if there are drawn shapes present
+			if (shapesXml.svg.g) {
+				const shapes = Array.isArray(shapesXml.svg.g)
+					? shapesXml.svg.g.find((el) => el.image == image.id)
+					: shapesXml.svg.g;
 
-								shapesInfo.push(temp);
-							}
-						} else {
-							const shape = shapes.g;
+				if (shapes) {
+					const shapesInfo = [];
+					if (Array.isArray(shapes.g)) {
+						for (let shape of shapes.g) {
 							const temp = {
 								id: shape.id,
 								timestamp: {
@@ -102,13 +83,40 @@ class DataSorter {
 
 							shapesInfo.push(temp);
 						}
+					} else {
+						const shape = shapes.g;
+						const temp = {
+							id: shape.id,
+							timestamp: {
+								start: parseFloat(shape.timestamp),
+								end:
+									shape.undo == '-1'
+										? slideInfo.timestamp.end
+										: parseFloat(shape.undo),
+							},
+							location: path.resolve(
+								presentation.shapesLocation,
+								`${shape.id}.png`
+							),
+						};
 
-						slideInfo.shapes = shapesInfo;
+						shapesInfo.push(temp);
 					}
-				}
 
-				slides.push(slideInfo);
+					slideInfo.shapes = shapesInfo;
+				}
 			}
+
+			slides.push(slideInfo);
+		}
+
+		const svgImage = shapesXml.svg.image;
+		if (Array.isArray(svgImage)) {
+			for (let image of svgImage) {
+				processImage(image);
+			}
+		} else {
+			processImage(svgImage);
 		}
 
 		this.slides = slides;

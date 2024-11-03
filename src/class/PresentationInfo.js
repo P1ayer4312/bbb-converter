@@ -18,8 +18,9 @@ class PresentationInfo {
 	/**
 	 * @param {string} url
 	 * @param {string} inputFileName
+	 * @param {number} index
 	 */
-	constructor(url, inputFileName) {
+	constructor(url, inputFileName, index) {
 		logs('Creating "PresentationInfo" instance', 'yellow');
 		/** @type {boolean} */
 		this.isLocalDevEnv = process.argv.includes('--local');
@@ -36,7 +37,7 @@ class PresentationInfo {
 		const folderLocation = path.resolve(
 			'presentations',
 			inputFileName,
-			`p_${presentationId}`
+			`${index}_${presentationId}`
 		);
 		const originalFilesUrl = `${inputUrl.protocol}//${inputUrl.hostname}/presentation/${presentationId}`;
 		const filesUrl = this.isLocalDevEnv

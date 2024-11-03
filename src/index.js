@@ -13,7 +13,7 @@ async function main() {
 		const inputsFile = inputsFiles[fileNameKey];
 
 		for (let [nIndex, input] of inputsFile.entries()) {
-			const BBB = new PresentationInfo(input, fileNameKey);
+			const BBB = new PresentationInfo(input, fileNameKey, nIndex);
 			BBB.createFolders();
 			await BBB.fetchAllXmlFiles();
 			BBB.loadCourseInfo();
